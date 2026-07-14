@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NFO — Auction Analysis &amp; GM Bid Curves</title>
+<style>
+  :root{
+    --page:#f9f9f7; --surface:#fcfcfb;
+    --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+    --s1:#2a78d6; --s2:#1baf7a; --s6:#e34948;
+    --ord-1:#86b6ef; --ord-2:#2a78d6; --ord-3:#104281;
+    --crit:#d03b3b; --good:#0ca30c;
+    --shadow:0 1px 2px rgba(11,11,11,.04),0 4px 16px rgba(11,11,11,.04);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --page:#0d0d0d; --surface:#1a1a19;
+      --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+      --s1:#3987e5; --s2:#199e70; --s6:#e66767;
+      --ord-1:#2a78d6; --ord-2:#3987e5; --ord-3:#184f95;
+      --crit:#d03b3b; --good:#0ca30c;
+      --shadow:none;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--page); color:var(--ink);
+    font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1120px; margin:0 auto; padding:32px 20px 80px}
+  header.top{padding:8px 0 28px; border-bottom:1px solid var(--border); margin-bottom:32px}
+  h1{font-size:clamp(1.6rem,4vw,2.3rem); line-height:1.2; margin:0 0 8px; letter-spacing:-.02em}
+  .sub{color:var(--ink-2); margin:0; font-size:.95rem}
+  .meta{color:var(--muted); font-size:.82rem; margin-top:10px}
+  h2{font-size:1.3rem; margin:48px 0 6px; letter-spacing:-.01em}
+  h3{font-size:1rem; margin:28px 0 8px}
+  .lede{color:var(--ink-2); margin:0 0 20px; max-width:70ch}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; box-shadow:var(--shadow)}
+
+  /* stat tiles */
+  .tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:24px 0 8px}
+  .tile{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow)}
+  .tile .v{font-size:1.9rem; font-weight:650; letter-spacing:-.02em; line-height:1.1}
+  .tile .k{color:var(--ink-2); font-size:.8rem; margin-top:6px; line-height:1.35}
+  .tile.bad .v{color:var(--crit)}
+
+  /* small multiples */
+  .sm-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; margin-top:16px}
+  .sm{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:12px 12px 6px; box-shadow:var(--shadow)}
+  .sm .nm{font-size:.82rem; font-weight:600; display:flex; justify-content:space-between; gap:8px; align-items:baseline}
+  .sm .rk{color:var(--muted); font-weight:500; font-variant-numeric:tabular-nums; flex:none}
+  .sm .note{font-size:.72rem; color:var(--muted); margin-top:2px; min-height:1.2em}
+  .sm.flag{border-color:var(--crit)}
+  .sm.flag .note{color:var(--crit)}
+
+  /* charts */
+  .chart{width:100%; height:auto; display:block; overflow:visible}
+  .grid-l{stroke:var(--grid); stroke-width:1}
+  .axis-l{stroke:var(--axis); stroke-width:1}
+  .tick{fill:var(--muted); font-size:10px; font-variant-numeric:tabular-nums}
+  .lbl{fill:var(--ink-2); font-size:11px}
+  .dz{fill:var(--crit); opacity:.07}
+
+  /* tables */
+  .tbl-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--border); border-radius:12px; background:var(--surface); box-shadow:var(--shadow)}
+  table{border-collapse:collapse; width:100%; font-size:.86rem; min-width:600px}
+  th,td{padding:9px 12px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--grid)}
+  th:first-child,td:first-child{text-align:left; white-space:normal; min-width:150px}
+  thead th{
+    position:sticky; top:0; background:var(--surface); color:var(--ink-2);
+    font-size:.74rem; text-transform:uppercase; letter-spacing:.04em; font-weight:600;
+    cursor:pointer; user-select:none; border-bottom:1px solid var(--axis);
+  }
+  thead th:hover{color:var(--ink)}
+  thead th::after{content:"↕"; opacity:.3; margin-left:5px; font-size:.85em}
+  thead th.asc::after{content:"↑"; opacity:1}
+  thead th.desc::after{content:"↓"; opacity:1}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:color-mix(in srgb, var(--s1) 6%, transparent)}
+  td{font-variant-numeric:tabular-nums}
+  .hi-good{color:var(--good); font-weight:600}
+  .hi-bad{color:var(--crit); font-weight:600}
+  .hint{color:var(--muted); font-size:.78rem; margin:8px 0 0}
+
+  /* GM cards */
+  details.gm{background:var(--surface); border:1px solid var(--border); border-radius:12px; margin-bottom:8px; box-shadow:var(--shadow)}
+  details.gm[open]{border-color:var(--axis)}
+  summary{padding:14px 16px; cursor:pointer; font-weight:600; display:flex; justify-content:space-between; gap:12px; align-items:baseline; list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+"; color:var(--muted); font-weight:400; flex:none}
+  details[open] summary::after{content:"–"}
+  summary .fin{color:var(--muted); font-weight:500; font-size:.85rem; font-variant-numeric:tabular-nums; margin-left:auto; padding-right:12px}
+  .gm-body{padding:0 16px 16px; color:var(--ink-2); font-size:.92rem}
+  .gm-body p{margin:0 0 10px}
+  .gm-body strong{color:var(--ink)}
+  .tag{display:inline-block; font-size:.7rem; padding:2px 8px; border-radius:99px; border:1px solid var(--border); color:var(--ink-2); margin-right:6px}
+
+  .callout{border-left:3px solid var(--crit); background:color-mix(in srgb, var(--crit) 5%, transparent); padding:12px 16px; border-radius:0 8px 8px 0; margin:16px 0; font-size:.92rem}
+  .callout.good{border-left-color:var(--good); background:color-mix(in srgb, var(--good) 6%, transparent)}
+  .callout strong{color:var(--ink)}
+  ol,ul{padding-left:20px; color:var(--ink-2)} li{margin-bottom:8px} li strong{color:var(--ink)}
+  footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--border); color:var(--muted); font-size:.8rem}
+  .tt{position:fixed; pointer-events:none; background:var(--ink); color:var(--page); padding:6px 10px; border-radius:6px; font-size:.76rem; opacity:0; transition:opacity .1s; z-index:99; white-space:nowrap; font-variant-numeric:tabular-nums}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>NFO — Auction Analysis &amp; GM Bid Curves</h1>
+  <p class="sub">How all 10 general managers spend their money, and when.</p>
+  <p class="meta">3-year averages (2023–2025) · 10 GMs · $200 budget · 14-man roster · Draft-clock section uses the full 6-year sample (2020–2025)</p>
+</header>
+
+<h2>The headline</h2>
+<p class="lede">The GMs who win are <strong>not</strong> the ones who spend most on any position. They're the ones with the best points-per-dollar and hit rate. Allocation is noise; <strong>selection and market discipline</strong> are signal.</p>
+
+<div class="tiles">
+  <div class="tile"><div class="v">3.5 hrs</div><div class="k">Average draft length (~140 players)</div></div>
+  <div class="tile"><div class="v">57%</div><div class="k">Of all league money spent in the first hour</div></div>
+  <div class="tile"><div class="v">96%</div><div class="k">Of $30+ studs sold in the first third</div></div>
+  <div class="tile bad"><div class="v">41%</div><div class="k">Of budget ReD PantY NiTe spends in the middle third — last place</div></div>
+</div>
+
+<h2>The bid curve</h2>
+<p class="lede">Percentage of each GM's budget spent in every 10% slice of the draft, ordered by average finish. The shaded band is the <strong>middle third — the dead zone</strong>. Watch how the bottom teams drift into it.</p>
+<div class="sm-grid" id="smGrid"></div>
+<p class="hint">Hover any point for the exact figure. Each panel shares the same axes (0–50% of budget).</p>
+
+<div class="callout">
+  <strong>The clearest signal in the whole dataset.</strong> ReD PantY NiTe spends <strong>41% of their budget in the middle third</strong> — by far the most in the league — and finishes dead last. Their curve is erratic: <strong>46% in D1, then $0 in D2, then 20% in D5</strong>. No plan. Every top-3 team keeps middle spend at 22–25%.
+</div>
+<div class="callout good">
+  <strong>Front-loading isn't the goal.</strong> The champion (San Di Lello) is <em>not</em> the most front-loaded GM — he's balanced (69% early / 24% mid). Wilfork front-loads harder (86%) and finishes 6.7. <strong>Avoiding the middle-third trap is what matters.</strong>
+</div>
+
+<h2>Where the money goes: early / middle / late</h2>
+<p class="lede">Share of each GM's budget by draft phase. Top teams keep the middle third to 22–25%.</p>
+<div class="card"><svg id="phaseChart" class="chart" role="img" aria-label="Stacked bar chart of budget share by draft phase for each GM"></svg></div>
+
+<h2>Passivity loses</h2>
+<p class="lede"><strong>Low conversion is good.</strong> It means you bid on players you don't win — draining rivals, learning their price points, staying in every conversation. The most passive GM finishes last; the most aggressive price-enforcer finishes 4th.</p>
+<div class="card"><svg id="convChart" class="chart" role="img" aria-label="Scatter plot of bid conversion rate versus average finish"></svg></div>
+<div class="callout">
+  <strong>ReD PantY NiTe</strong> bids on just <strong>29 players</strong> and wins 48% of them — the most passive GM in the league. No market leverage; they pay full retail on everything. <strong>Down by the Rivers</strong> bids on <strong>56 players</strong> and wins only 25% — the premier price-enforcer. Target a conversion rate of <strong>25–35%, not 48%</strong>.
+</div>
+
+<h2>Spend &amp; roster construction</h2>
+<p class="lede">Click any column header to re-rank. Note that allocation alone does <em>not</em> predict finish: Down by the Rivers is the most RB-heavy team ($137) and finishes <strong>4th</strong>; ReD PantY NiTe is similarly RB-heavy ($128) and finishes <strong>last</strong>.</p>
+<div class="tbl-wrap"><table id="tSpend"></table></div>
+<p class="hint">"Mid-RB $" = dollars sunk into $10–25 running backs — the worst-value tier in the auction. 7 of 10 GMs burn $22–40 there.</p>
+
+<h2>Bidding behavior</h2>
+<div class="tbl-wrap"><table id="tBid"></table></div>
+
+<h2>Efficiency — who actually hits</h2>
+<p class="lede">This is the table that predicts finish.</p>
+<div class="tbl-wrap"><table id="tEff"></table></div>
+<div class="callout good">
+  <strong>Basaraville's low pts/$ (3.3) is misleading.</strong> They deliberately punt QB at the auction ($5) and make it back on waivers — they're the #1 FAAB QB streamer in league history (Mayfield, Stafford, Lawrence, Purdy, Ryan, Cousins). Their auction looks inefficient; their season isn't. <strong>Two valid QB paths: buy cheap, or stream. Paying up isn't one of them.</strong>
+</div>
+
+<h2>The draft clock</h2>
+<p class="lede">Cumulative share of <em>all</em> league money spent as the clock runs. Over half the budget is gone in the first hour.</p>
+<div class="card"><svg id="clockChart" class="chart" role="img" aria-label="Line chart of cumulative money spent versus elapsed draft time"></svg></div>
+
+<div class="tiles">
+  <div class="tile"><div class="v">25%</div><div class="k">of all money spent in the first <strong>20 minutes</strong></div></div>
+  <div class="tile"><div class="v">57%</div><div class="k">spent by the <strong>1-hour</strong> mark</div></div>
+  <div class="tile"><div class="v">76%</div><div class="k">spent by <strong>1h 40m</strong> (end of first third)</div></div>
+  <div class="tile"><div class="v">41 min</div><div class="k">the entire final third — 51 sec/player</div></div>
+</div>
+
+<h3>Where the thirds fall on the clock</h3>
+<div class="tbl-wrap"><table id="tClock"></table></div>
+
+<div class="callout">
+  <strong>Rule:</strong> If it's an hour in and you're still holding most of your budget, you are not being disciplined — <strong>you are losing.</strong> The market has already cleared 57% of its money and nearly all of its stars.
+</div>
+
+<h2>GM scouting reports</h2>
+<div id="gmCards"></div>
+
+<h2>Key takeaways</h2>
+<ol>
+  <li><strong>Middle-third spending is the strongest predictor of failure.</strong> Last place spends 41% there; top-3 spend 22–25%. Get money in early or hold it for darts — never drift into the middle.</li>
+  <li><strong>Passive bidding loses.</strong> Bid on 40–55 players, win 14. Low conversion = leverage.</li>
+  <li><strong>The $10–25 RB trap costs the field $22–40 per team.</strong> Avoiding it is free money.</li>
+  <li><strong>Points-per-dollar and hit% predict finish — not positional allocation.</strong> RB-heavy teams finish 4th <em>and</em> 10th.</li>
+  <li><strong>Two valid QB paths:</strong> buy a cheap one at auction, or punt and stream. <strong>Paying up does not work.</strong></li>
+</ol>
+
+<footer>
+  <p><strong>Caveats.</strong> 3 seasons × 10 GMs = 30 franchise-seasons; individual GM averages rest on only 3 data points each — treat single-GM numbers as directional, not precise. "Finish" = regular-season record + points-for; <code>playoffBracket</code> was never scraped, so championships aren't measured. "Hit %" = the player returned startable production at his position that year. Draft-clock section uses the full 6-year sample. Franchise names change year to year; profiles are keyed on stable franchise ID.</p>
+</footer>
+
+</div>
+<div class="tt" id="tt"></div>
+
+<script>
+const GM = [
+  {n:"San Di Lello Schiaffo", rk:2.7, RB:103, WR:74, QB:10, TE:10, max:51, s30:2.3, mid:2.7, dart:6.0, midRB:11, E:69, M:24, L:7, anc:15, bids:86, plyrs:38, conv:37, noms:14, ppd:4.9, hit:50, qbp:168,
+   dec:[25,32,13,8,6,8,2,3,3,1], tag:"The Champion", note:"Balanced. Avoids the trap.",
+   body:"Balanced, disciplined, ruthless. <strong>Best pts/$ in the league (4.9)</strong> and avoids the mid-RB trap better than almost anyone ($11). Spends 69% early / 24% mid — never gets stuck in the middle. Two elite anchors plus a stack of $1–3 fill; almost nothing in between. Bids on 38 players, wins 14 (37%) — active enough to shape prices.<br><br>⚠️ <strong>His one collapse (2025, #6) came when he went RB-heavy ($131 RB / $50 WR), had no WR alpha, and paid $22 for a mid-tier RB.</strong> He proved the thesis by violating it."},
+  {n:"The Cats", rk:3.3, RB:99, WR:79, QB:16, TE:5, max:57, s30:2.3, mid:4.7, dart:6.3, midRB:28, E:72, M:22, L:7, anc:14, bids:135, plyrs:43, conv:33, noms:17, ppd:4.1, hit:52, qbp:177,
+   dec:[35,17,14,18,4,5,0,4,0,2], tag:"Balanced Contender", note:"Best hit rate of the contenders.",
+   body:"Best hit rate among contenders (<strong>52%</strong>). Very aggressive bidder (135 bids across 43 players). Uses a <strong>balanced mid-tier build</strong> — the league's main counterexample — but it works because <strong>their mid-tier buys are WRs</strong> (Pickens $20→106, Higgins $21→76), which is the <em>good</em> mid-tier. Pays up for QB ($16) and gets it."},
+  {n:"Down by the Rivers", rk:4.0, RB:137, WR:44, QB:8, TE:11, max:52, s30:2.0, mid:3.7, dart:5.3, midRB:32, E:71, M:25, L:4, anc:7, bids:139, plyrs:56, conv:25, noms:13, ppd:4.5, hit:43, qbp:150,
+   dec:[41,15,14,4,9,10,2,3,0,1], tag:"Price Enforcer", note:"Most aggressive bidder in the league.",
+   body:"The most aggressive bidder in the league — <strong>139 bids across 56 players, 25% conversion.</strong> Lands anchors earliest (7% into the draft). Extremely RB-heavy ($137, dual anchors) and <strong>chronically light at WR ($44)</strong>. His ceiling is capped by that WR hole — when he lifted WR to $60 in 2024, he finished #3."},
+  {n:"Basaraville Xtreme", rk:5.0, RB:100, WR:90, QB:5, TE:4, max:56, s30:3.0, mid:2.3, dart:7.7, midRB:4, E:80, M:13, L:7, anc:13, bids:91, plyrs:36, conv:40, noms:16, ppd:3.3, hit:43, qbp:106,
+   dec:[41,20,13,8,5,1,5,4,2,2], tag:"The Streamer", note:"Punts QB, dominates FAAB.",
+   body:"Buys the most studs (3.0 at $30+) and <strong>completely avoids the mid-RB trap ($4 — best in league)</strong>. <strong>Punts QB at auction ($5) and dominates the FAAB QB market instead</strong> — the #1 QB streamer in league history. Lowest auction pts/$ (3.3), but that's by design. Front-loads hard (80% early)."},
+  {n:"Pen Island", rk:5.3, RB:84, WR:98, QB:9, TE:9, max:54, s30:2.0, mid:4.3, dart:5.3, midRB:40, E:71, M:25, L:4, anc:10, bids:98, plyrs:43, conv:33, noms:11, ppd:4.7, hit:57, qbp:345,
+   dec:[28,23,15,8,10,9,4,3,0,0], tag:"Wasted Genius", note:"Best hit rate — ruined by mid-RB spend.", flag:true,
+   body:"<strong>Best hit rate in the league (57%) and an absurd 345 QB points off $9 of spend.</strong> Should be a contender. <strong>Their fatal flaw: $40 on mid-tier RBs — the most in the league.</strong> They're burning ~20% of their budget on the single worst tier in the auction. Fix that one thing and they're a top-2 team."},
+  {n:"The Flying Kossaks", rk:5.7, RB:92, WR:90, QB:10, TE:8, max:49, s30:2.0, mid:4.7, dart:5.3, midRB:22, E:61, M:32, L:7, anc:20, bids:112, plyrs:48, conv:30, noms:16, ppd:4.2, hit:43, qbp:229,
+   dec:[9,15,33,21,11,4,2,3,1,2], tag:"Late Starter", note:"Sits out the opening — only 9% in D1.",
+   body:"The only GM who sits out the opening — just <strong>9% of budget in D1</strong>, then explodes for 33% in D3. Lands anchors latest (20% into the draft). Spends the most in the middle third of the contenders (32%). Big QB production (229)."},
+  {n:"The Birds", rk:5.7, RB:103, WR:70, QB:8, TE:16, max:56, s30:2.3, mid:3.3, dart:6.0, midRB:25, E:84, M:10, L:7, anc:9, bids:112, plyrs:49, conv:29, noms:14, ppd:3.9, hit:50, qbp:197,
+   dec:[32,25,24,6,5,0,2,3,3,0], tag:"Front-Loader", note:"84% early. Overspends on TE.",
+   body:"84% early, 10% mid. Spends the most on TE in the league ($16) — the lowest-leverage position. Decent hit rate (50%)."},
+  {n:"Wilfork On First Date", rk:6.7, RB:77, WR:104, QB:7, TE:12, max:52, s30:2.3, mid:4.0, dart:6.0, midRB:11, E:86, M:10, L:4, anc:13, bids:102, plyrs:45, conv:31, noms:13, ppd:3.9, hit:50, qbp:184,
+   dec:[22,43,12,10,2,5,2,0,1,1], tag:"WR Hoarder", note:"Most WR-heavy; RB shortfall caps them.",
+   body:"Most WR-heavy in the league ($104) and lowest RB ($77). <strong>Most front-loaded GM (86% early).</strong> Solid 50% hit rate, but the RB shortfall caps them — <strong>you can't replace RBs in-season</strong> (only a 22% waiver hit rate)."},
+  {n:"Eskimo Bros", rk:7.7, RB:73, WR:97, QB:15, TE:12, max:49, s30:2.7, mid:3.3, dart:6.7, midRB:24, E:68, M:27, L:5, anc:18, bids:109, plyrs:36, conv:39, noms:16, ppd:3.8, hit:40, qbp:181,
+   dec:[15,41,12,19,6,3,1,1,1,2], tag:"Slow Starter", note:"Lowest hit rate in the league (40%).",
+   body:"Only 15% in D1, then 41% in D2. <strong>Lowest hit rate in the league (40%)</strong> — they're simply picking the wrong players. Also WR-heavy ($97) with the second-lowest RB spend ($73)."},
+  {n:"ReD PantY NiTe", rk:9.0, RB:128, WR:56, QB:8, TE:5, max:58, s30:2.0, mid:4.7, dart:6.0, midRB:24, E:50, M:41, L:9, anc:13, bids:61, plyrs:29, conv:48, noms:13, ppd:3.9, hit:45, qbp:169,
+   dec:[46,0,5,10,20,3,9,5,3,1], tag:"Cautionary Tale", note:"41% in the middle third. Most passive bidder.", flag:true,
+   body:"The most instructive profile in the league — <strong>every failure mode at once</strong>:<br>• <strong>41% of budget in the middle third</strong> — most in the league (the dead zone)<br>• <strong>The most passive bidder</strong> — 61 bids on just 29 players, 48% conversion. No leverage; pays retail.<br>• <strong>Erratic curve</strong> — blows 46% in D1, then $0 in D2, then dumps 20% in D5. No plan.<br>• <strong>RB-heavy ($128) / WR-starved ($56)</strong> — over-invests the least-efficient position.<br><br>✅ <strong>The good news:</strong> they're genuinely strong at cheap-QB streaming (Maye, Cousins, Tua). That's the one thing they do right."},
+];
+
+const CLOCK = [ // % of clock -> % of money
+  {t:10,m:25},{t:20,m:43},{t:30,m:57},{t:40,m:67},{t:50,m:76},
+  {t:60,m:83},{t:70,m:89},{t:80,m:94},{t:90,m:98},{t:100,m:100}
+];
+const YEARS = [
+  ["2020",160,"225 min","18:00","21:46"],["2021",140,"217 min","18:30","22:07"],
+  ["2022",141,"190 min","18:18","21:28"],["2023",140,"214 min","19:31","23:05"],
+  ["2024",140,"205 min","19:05","22:30"],["2025",140,"193 min","19:08","22:21"],
+];
+
+const NS="http://www.w3.org/2000/svg";
+const tt=document.getElementById('tt');
+function el(t,a={}){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function showTT(evt,html){tt.innerHTML=html;tt.style.opacity=1;
+  const r=12; let x=evt.clientX+r, y=evt.clientY-r-8;
+  const w=tt.offsetWidth,h=tt.offsetHeight;
+  if(x+w>innerWidth-8)x=evt.clientX-w-r; if(y<8)y=evt.clientY+r+8;
+  tt.style.left=x+'px'; tt.style.top=y+'px';}
+function hideTT(){tt.style.opacity=0;}
+
+/* ---------- small multiples: bid curves ---------- */
+(function(){
+  const host=document.getElementById('smGrid');
+  const W=220,H=96,P={t:8,r:6,b:16,l:22}, MAXY=50;
+  GM.forEach(g=>{
+    const card=document.createElement('div');
+    card.className='sm'+(g.flag?' flag':'');
+    card.innerHTML=`<div class="nm"><span>${g.n}</span><span class="rk">#${g.rk.toFixed(1)}</span></div><div class="note">${g.note}</div>`;
+    const svg=el('svg',{viewBox:`0 0 ${W} ${H}`,class:'chart'});
+    const iw=W-P.l-P.r, ih=H-P.t-P.b;
+    const X=i=>P.l+(i+.5)*(iw/10), Y=v=>P.t+ih-(v/MAXY)*ih;
+    // dead zone band (deciles 4-7 ≈ middle third)
+    svg.appendChild(el('rect',{x:P.l+iw*0.333,y:P.t,width:iw*0.334,height:ih,class:'dz'}));
+    [0,25,50].forEach(v=>{
+      svg.appendChild(el('line',{x1:P.l,y1:Y(v),x2:W-P.r,y2:Y(v),class:'grid-l'}));
+      const t=el('text',{x:P.l-4,y:Y(v)+3,class:'tick','text-anchor':'end'});t.textContent=v;svg.appendChild(t);
+    });
+    svg.appendChild(el('line',{x1:P.l,y1:P.t+ih,x2:W-P.r,y2:P.t+ih,class:'axis-l'}));
+    const d=g.dec.map((v,i)=>`${i?'L':'M'}${X(i)},${Y(v)}`).join(' ');
+    svg.appendChild(el('path',{d,fill:'none',stroke:'var(--s1)','stroke-width':2,'stroke-linejoin':'round','stroke-linecap':'round'}));
+    g.dec.forEach((v,i)=>{
+      svg.appendChild(el('circle',{cx:X(i),cy:Y(v),r:2.5,fill:'var(--s1)',stroke:'var(--surface)','stroke-width':2}));
+      const hit=el('rect',{x:X(i)-iw/20,y:P.t,width:iw/10,height:ih,fill:'transparent'});
+      hit.addEventListener('mousemove',e=>showTT(e,`<b>${g.n}</b><br>Decile ${i+1} · ${v}% of budget`));
+      hit.addEventListener('mouseleave',hideTT);
+      svg.appendChild(hit);
+    });
+    [1,5,10].forEach(n=>{const t=el('text',{x:X(n-1),y:H-4,class:'tick','text-anchor':'middle'});t.textContent='D'+n;svg.appendChild(t);});
+    card.appendChild(svg); host.appendChild(card);
+  });
+})();
+
+/* ---------- phase stacked bars ---------- */
+(function(){
+  const svg=document.getElementById('phaseChart');
+  const rows=[...GM], n=rows.length;
+  const W=760,rowH=30,P={t:34,r:16,b:8,l:170},H=P.t+n*rowH+P.b;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const iw=W-P.l-P.r, X=v=>P.l+(v/100)*iw;
+  [0,25,50,75,100].forEach(v=>{
+    svg.appendChild(el('line',{x1:X(v),y1:P.t-6,x2:X(v),y2:H-P.b,class:'grid-l'}));
+    const t=el('text',{x:X(v),y:P.t-12,class:'tick','text-anchor':'middle'});t.textContent=v+'%';svg.appendChild(t);
+  });
+  const segs=[{k:'E',c:'var(--ord-1)',n:'Early third'},{k:'M',c:'var(--ord-2)',n:'Middle third'},{k:'L',c:'var(--ord-3)',n:'Late third'}];
+  // legend
+  let lx=P.l;
+  segs.forEach(s=>{
+    svg.appendChild(el('rect',{x:lx,y:6,width:10,height:10,rx:2,fill:s.c}));
+    const t=el('text',{x:lx+15,y:15,class:'lbl'});t.textContent=s.n;svg.appendChild(t);
+    lx+=s.n.length*6.4+30;
+  });
+  rows.forEach((g,i)=>{
+    const y=P.t+i*rowH+5, bh=16;
+    const nm=el('text',{x:P.l-10,y:y+12,class:'lbl','text-anchor':'end'});
+    nm.textContent=g.n.length>22?g.n.slice(0,21)+'…':g.n; svg.appendChild(nm);
+    let acc=0;
+    segs.forEach(s=>{
+      const v=g[s.k], w=Math.max((v/100)*iw-2,0);
+      const r=el('rect',{x:X(acc),y,width:w,height:bh,rx:3,fill:s.c});
+      r.addEventListener('mousemove',e=>showTT(e,`<b>${g.n}</b><br>${s.n}: ${v}% of budget`));
+      r.addEventListener('mouseleave',hideTT);
+      svg.appendChild(r);
+      if(s.k==='M'&&v>=30){
+        const lb=el('text',{x:X(acc)+w/2,y:y+12,class:'tick','text-anchor':'middle',fill:'#fff','font-weight':'700'});
+        lb.textContent=v+'%'; svg.appendChild(lb);
+      }
+      acc+=v;
+    });
+  });
+})();
+
+/* ---------- conversion vs finish scatter ---------- */
+(function(){
+  const svg=document.getElementById('convChart');
+  const W=760,H=340,P={t:20,r:24,b:52,l:56};
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const iw=W-P.l-P.r, ih=H-P.t-P.b;
+  const xd=[22,50], yd=[1,10];
+  const X=v=>P.l+((v-xd[0])/(xd[1]-xd[0]))*iw;
+  const Y=v=>P.t+((v-yd[0])/(yd[1]-yd[0]))*ih; // finish 1 at top
+  [25,30,35,40,45,50].forEach(v=>{
+    svg.appendChild(el('line',{x1:X(v),y1:P.t,x2:X(v),y2:P.t+ih,class:'grid-l'}));
+    const t=el('text',{x:X(v),y:P.t+ih+18,class:'tick','text-anchor':'middle'});t.textContent=v+'%';svg.appendChild(t);
+  });
+  [2,4,6,8,10].forEach(v=>{
+    svg.appendChild(el('line',{x1:P.l,y1:Y(v),x2:P.l+iw,y2:Y(v),class:'grid-l'}));
+    const t=el('text',{x:P.l-8,y:Y(v)+4,class:'tick','text-anchor':'end'});t.textContent=v;svg.appendChild(t);
+  });
+  svg.appendChild(el('line',{x1:P.l,y1:P.t+ih,x2:P.l+iw,y2:P.t+ih,class:'axis-l'}));
+  svg.appendChild(el('line',{x1:P.l,y1:P.t,x2:P.l,y2:P.t+ih,class:'axis-l'}));
+  let t1=el('text',{x:P.l+iw/2,y:H-10,class:'lbl','text-anchor':'middle'});
+  t1.textContent='Bid conversion rate  (wins ÷ players bid on) — lower = more aggressive'; svg.appendChild(t1);
+  let t2=el('text',{x:14,y:P.t+ih/2,class:'lbl','text-anchor':'middle',transform:`rotate(-90 14 ${P.t+ih/2})`});
+  t2.textContent='Average finish (1 = best)'; svg.appendChild(t2);
+  GM.forEach(g=>{
+    const x=X(g.conv), y=Y(g.rk), bad=g.conv>=45||g.rk>=9;
+    const c=el('circle',{cx:x,cy:y,r:6,fill:bad?'var(--s6)':'var(--s1)',stroke:'var(--surface)','stroke-width':2});
+    svg.appendChild(c);
+    const hit=el('circle',{cx:x,cy:y,r:14,fill:'transparent'});
+    hit.addEventListener('mousemove',e=>showTT(e,`<b>${g.n}</b><br>Finish ${g.rk.toFixed(1)} · ${g.conv}% conversion<br>${g.bids} bids on ${g.plyrs} players`));
+    hit.addEventListener('mouseleave',hideTT); svg.appendChild(hit);
+    if(['ReD PantY NiTe','Down by the Rivers','San Di Lello Schiaffo','Eskimo Bros'].includes(g.n)){
+      const anchor = g.conv>42?'end':'start', dx = g.conv>42?-11:11;
+      const lb=el('text',{x:x+dx,y:y+4,class:'lbl','text-anchor':anchor});
+      lb.textContent=g.n; svg.appendChild(lb);
+    }
+  });
+})();
+
+/* ---------- money vs clock ---------- */
+(function(){
+  const svg=document.getElementById('clockChart');
+  const W=760,H=320,P={t:20,r:24,b:52,l:52};
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  const iw=W-P.l-P.r, ih=H-P.t-P.b;
+  const X=v=>P.l+(v/100)*iw, Y=v=>P.t+ih-(v/100)*ih;
+  [0,25,50,75,100].forEach(v=>{
+    svg.appendChild(el('line',{x1:P.l,y1:Y(v),x2:P.l+iw,y2:Y(v),class:'grid-l'}));
+    const t=el('text',{x:P.l-8,y:Y(v)+4,class:'tick','text-anchor':'end'});t.textContent=v+'%';svg.appendChild(t);
+  });
+  [0,20,40,60,80,100].forEach(v=>{
+    const t=el('text',{x:X(v),y:P.t+ih+18,class:'tick','text-anchor':'middle'});
+    t.textContent=Math.round(v*2.07)+'m'; svg.appendChild(t);
+  });
+  svg.appendChild(el('line',{x1:P.l,y1:P.t+ih,x2:P.l+iw,y2:P.t+ih,class:'axis-l'}));
+  // area + line
+  const pts=[{t:0,m:0},...CLOCK];
+  const line=pts.map((p,i)=>`${i?'L':'M'}${X(p.t)},${Y(p.m)}`).join(' ');
+  svg.appendChild(el('path',{d:`${line} L${X(100)},${Y(0)} L${X(0)},${Y(0)} Z`,fill:'var(--s1)',opacity:.10}));
+  svg.appendChild(el('path',{d:line,fill:'none',stroke:'var(--s1)','stroke-width':2,'stroke-linejoin':'round'}));
+  // 1-hour marker (~29% of a 207-min draft)
+  const hx=X(29);
+  svg.appendChild(el('line',{x1:hx,y1:P.t,x2:hx,y2:P.t+ih,stroke:'var(--s6)','stroke-width':1.5}));
+  const hl=el('text',{x:hx+8,y:P.t+16,class:'lbl',fill:'var(--s6)','font-weight':'600'});
+  hl.textContent='1 hour in → 57% spent'; svg.appendChild(hl);
+  CLOCK.forEach(p=>{
+    svg.appendChild(el('circle',{cx:X(p.t),cy:Y(p.m),r:3.5,fill:'var(--s1)',stroke:'var(--surface)','stroke-width':2}));
+    const hit=el('rect',{x:X(p.t)-iw/20,y:P.t,width:iw/10,height:ih,fill:'transparent'});
+    hit.addEventListener('mousemove',e=>showTT(e,`${Math.round(p.t*2.07)} min elapsed<br><b>${p.m}%</b> of all money spent`));
+    hit.addEventListener('mouseleave',hideTT); svg.appendChild(hit);
+  });
+  const xl=el('text',{x:P.l+iw/2,y:H-10,class:'lbl','text-anchor':'middle'});
+  xl.textContent='Elapsed draft time (average draft = 207 min)'; svg.appendChild(xl);
+})();
+
+/* ---------- sortable tables ---------- */
+function buildTable(id,cols,rows,fmt){
+  const t=document.getElementById(id);
+  const thead=document.createElement('thead'), tr=document.createElement('tr');
+  cols.forEach((c,i)=>{const th=document.createElement('th');th.textContent=c.h;th.dataset.i=i;tr.appendChild(th);});
+  thead.appendChild(tr); t.appendChild(thead);
+  const tb=document.createElement('tbody'); t.appendChild(tb);
+  let sortI=0, dir=1;
+  function render(){
+    const rs=[...rows].sort((a,b)=>{
+      const k=cols[sortI].k, x=a[k], y=b[k];
+      return (typeof x==='number') ? (x-y)*dir : String(x).localeCompare(String(y))*dir;
+    });
+    tb.innerHTML='';
+    rs.forEach(r=>{
+      const tr=document.createElement('tr');
+      cols.forEach(c=>{
+        const td=document.createElement('td');
+        const v=r[c.k];
+        td.textContent = c.f ? c.f(v) : v;
+        const cls = fmt && fmt(c.k,v,r);
+        if(cls) td.className=cls;
+        tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    });
+    thead.querySelectorAll('th').forEach((th,i)=>{
+      th.className = i===sortI ? (dir===1?'asc':'desc') : '';
+    });
+  }
+  thead.addEventListener('click',e=>{
+    const th=e.target.closest('th'); if(!th) return;
+    const i=+th.dataset.i;
+    if(i===sortI) dir=-dir; else {sortI=i; dir = (typeof rows[0][cols[i].k]==='number')?1:1;}
+    render();
+  });
+  render();
+}
+const d1=v=>v.toFixed(1), money=v=>'$'+v, pct=v=>v+'%';
+
+buildTable('tSpend',[
+  {h:'GM',k:'n'},{h:'Finish',k:'rk',f:d1},{h:'$RB',k:'RB',f:money},{h:'$WR',k:'WR',f:money},
+  {h:'$QB',k:'QB',f:money},{h:'$TE',k:'TE',f:money},{h:'Max bid',k:'max',f:money},
+  {h:'#$30+',k:'s30',f:d1},{h:'#$10–25',k:'mid',f:d1},{h:'#≤$5',k:'dart',f:d1},{h:'Mid-RB $',k:'midRB',f:money}
+],GM,(k,v)=>{
+  if(k==='midRB') return v<=11?'hi-good':(v>=30?'hi-bad':'');
+  return '';
+});
+
+buildTable('tBid',[
+  {h:'GM',k:'n'},{h:'Finish',k:'rk',f:d1},{h:'Bids made',k:'bids'},{h:'Players bid on',k:'plyrs'},
+  {h:'Conversion',k:'conv',f:pct},{h:'Nominations',k:'noms'},{h:'Anchors at',k:'anc',f:pct}
+],GM,(k,v)=>{
+  if(k==='conv') return v<=30?'hi-good':(v>=45?'hi-bad':'');
+  return '';
+});
+
+buildTable('tEff',[
+  {h:'GM',k:'n'},{h:'Finish',k:'rk',f:d1},{h:'pts / $',k:'ppd',f:d1},{h:'Hit %',k:'hit',f:pct},
+  {h:'QB pts (auction)',k:'qbp'},{h:'$QB',k:'QB',f:money}
+],GM,(k,v)=>{
+  if(k==='ppd') return v>=4.5?'hi-good':(v<=3.4?'hi-bad':'');
+  if(k==='hit') return v>=52?'hi-good':(v<=40?'hi-bad':'');
+  return '';
+});
+
+/* clock table */
+(function(){
+  const t=document.getElementById('tClock');
+  t.innerHTML='<thead><tr><th>Phase</th><th>Players</th><th>Clock window</th><th>Duration</th><th>Pace</th></tr></thead>'+
+  '<tbody>'+
+  '<tr><td><strong>1st third</strong></td><td>1–47</td><td>0:00 → ~1:38</td><td>98 min</td><td><strong>124 sec/player</strong></td></tr>'+
+  '<tr><td><strong>2nd third</strong></td><td>48–93</td><td>1:38 → 2:46</td><td>68 min</td><td>86 sec/player</td></tr>'+
+  '<tr><td><strong>Final third</strong></td><td>94–140</td><td>2:46 → 3:27</td><td><strong>41 min</strong></td><td><strong>51 sec/player</strong></td></tr>'+
+  '</tbody>';
+  // years table appended below
+  const wrap=t.closest('.tbl-wrap');
+  const y=document.createElement('div'); y.className='tbl-wrap'; y.style.marginTop='12px';
+  const yt=document.createElement('table');
+  yt.innerHTML='<thead><tr><th>Year</th><th>Players</th><th>Duration</th><th>Start</th><th>End</th></tr></thead><tbody>'+
+    YEARS.map(r=>`<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join('')+'</tbody>';
+  y.appendChild(yt); wrap.parentNode.insertBefore(y,wrap.nextSibling);
+})();
+
+/* GM cards */
+(function(){
+  const host=document.getElementById('gmCards');
+  GM.forEach(g=>{
+    const d=document.createElement('details'); d.className='gm';
+    d.innerHTML=`<summary><span>${g.n}</span><span class="fin">avg finish ${g.rk.toFixed(1)}</span></summary>
+      <div class="gm-body"><p><span class="tag">${g.tag}</span></p><p>${g.body}</p></div>`;
+    host.appendChild(d);
+  });
+})();
+</script>
+</body>
+</html>
