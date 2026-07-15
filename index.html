@@ -242,6 +242,56 @@
   <li><strong>Fade the mid-RB run.</strong> When RBs start flying, the 6th–9th go +$2.2 hot — that's the moment to pivot to WR value or wait for the next RB tier.</li>
 </ul>
 
+<h2>Reading the room — bidder count &amp; bid speed</h2>
+<p class="lede">The full bid log lets us reconstruct every bidding war — how many GMs jumped in, how many bids, how long it took. The result: <strong>the war tells you the price before it's over.</strong> Below, "over/under model" is the residual (final price − what the player's rank justifies), across 412 reconstructed auctions. Negative = <span class="hi-good">bargain</span>, positive = <span class="hi-bad">overpay</span>.</p>
+
+<div class="tiles">
+  <div class="tile"><div class="v">5th</div><div class="k">the <strong>paddle</strong> that flips a player from par to overpay</div></div>
+  <div class="tile"><div class="v">+$3.2</div><div class="k">overpay on a <strong>long, grinding war</strong> (~100s, ~16 bids)</div></div>
+  <div class="tile"><div class="v">−$1.4</div><div class="k"><strong>discount</strong> when it resolves fast (2-way, ~6 bids)</div></div>
+  <div class="tile"><div class="v">+0.41</div><div class="k"><strong>bid count</strong> is the best single predictor of overpaying</div></div>
+</div>
+
+<h3>1. Count the paddles</h3>
+<p class="lede">Raw price tracks bidder count strongly (correlation +0.76) — but that's mostly studs drawing crowds. Controlling for value, here's when the crowd makes you <em>overpay</em>:</p>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>GMs bidding</th><th>Over / under model</th><th>n</th></tr></thead>
+  <tbody>
+    <tr><td>1 (uncontested)</td><td class="hi-good">−$1.0</td><td>130</td></tr>
+    <tr><td>2</td><td class="hi-good">−$1.4</td><td>41</td></tr>
+    <tr><td>3</td><td>+$0.1</td><td>63</td></tr>
+    <tr><td>4</td><td class="hi-good">−$0.3</td><td>50</td></tr>
+    <tr><td><strong>5</strong></td><td class="hi-bad">+$2.9</td><td>56</td></tr>
+    <tr><td>6+</td><td class="hi-bad">+$2.1</td><td>72</td></tr>
+  </tbody>
+</table></div>
+<div class="callout">
+  <strong>There's a clean threshold at ~5 bidders.</strong> With <strong>4 or fewer</strong> GMs in, you get the player at par or a slight <em>discount</em> — a two-way war is actually the best deal (−$1.4). The moment the <strong>5th paddle goes up, the price jumps ~$3 over value.</strong>
+</div>
+
+<h3>2. Watch the speed</h3>
+<p class="lede">After controlling for value, <strong>bid intensity predicts overpayment</strong> (total bids is the strongest signal, +0.41). Among contested players:</p>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>War type</th><th>Over / under model</th><th>Profile</th></tr></thead>
+  <tbody>
+    <tr><td>Quick to resolve</td><td class="hi-good">−$1.4</td><td>~54s, ~6 bids</td></tr>
+    <tr><td>Long, grinding war</td><td class="hi-bad">+$3.2</td><td>~104s, ~16 bids</td></tr>
+    <tr><td>Low bid velocity</td><td class="hi-good">−$0.9</td><td>leisurely</td></tr>
+    <tr><td>High bid velocity (rapid-fire)</td><td class="hi-bad">+$2.7</td><td>bids flying</td></tr>
+  </tbody>
+</table></div>
+<p class="hint">They all say the same thing: <strong>the amount of bidding is the tell.</strong> Whether a war drags on <em>or</em> the bids fly rapid-fire, lots of bidding = someone's overpaying. A player grabbed with <strong>few bids that resolve fast</strong> comes in <em>below</em> value.</p>
+
+<h3>The play</h3>
+<ul>
+  <li><strong>Sparse &amp; quick</strong> (2–4 bidders, bidding peters out) → <strong>your window — pounce.</strong> You'll win at or under model.</li>
+  <li><strong>Crowded &amp; grinding</strong> (5th bidder jumps in, bids keep coming past ~10) → <strong>fade it.</strong> That player is going ~$3+ over value; if he's not a core target, let someone else eat the overpay.</li>
+  <li><strong>The 5th bidder is the trigger.</strong> Below it you're fine; at it, the premium kicks in.</li>
+</ul>
+<div class="callout good">
+  <strong>Honest caveat:</strong> a crowded, grinding war may mean the room <em>correctly re-rated</em> a player after ADP was set (a camp riser, a role change) — info the model can't see. So use the paddle-count as a live signal to <em>reassess</em>, not blind gospel: if five sharp GMs are all-in on a guy your sheet has cheap, your number might be stale. If it's a random pile-on, hold your max and walk.
+</div>
+
 <h2>GM scouting reports</h2>
 <div id="gmCards"></div>
 
@@ -253,6 +303,7 @@
   <li><strong>Points-per-dollar and hit% predict finish — not positional allocation.</strong> RB-heavy teams finish 4th <em>and</em> 10th.</li>
   <li><strong>Two valid QB paths:</strong> buy a cheap one at auction, or punt and stream. <strong>Paying up does not work.</strong></li>
   <li><strong>Inflation is localized, and the squeeze is a myth.</strong> Never open a position (the first WR pays +$6.5); be the <em>last</em> buyer in a tier (~$3–5 cheaper), but don't fall off the cliff below it.</li>
+  <li><strong>Count the paddles.</strong> ≤4 bidders = par or bargain; the 5th paddle means ~$3 over value. Sparse-and-quick wars are your window; crowded, grinding wars are overpays to fade.</li>
 </ol>
 
 <footer>
