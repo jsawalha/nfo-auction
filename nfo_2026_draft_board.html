@@ -109,6 +109,40 @@
   .watch-empty{color:var(--muted);font-size:.82rem}
   .foot{max-width:1240px;margin:8px auto 40px;padding:0 16px;color:var(--muted);font-size:.75rem}
   .foot b{color:var(--ink-2)}
+
+  /* ---------- phone layout: table rows become stacked cards (no side-scroll) ---------- */
+  @media(max-width:640px){
+    .hd-in{gap:8px}
+    h1{font-size:1.15rem}
+    .hd-stats{width:100%;margin-left:0;gap:5px}
+    .stat{flex:1;min-width:0;padding:5px 3px}
+    .stat .v{font-size:.95rem}
+    .stat .k{font-size:.54rem}
+    .wrap{padding:12px}
+    .filters{gap:6px}
+    input[type=search]{min-width:100%;order:-1}
+    .toggle{flex:1;justify-content:center}
+    table,thead,tbody,tr,td{display:block}
+    table{min-width:0}
+    thead{display:none}
+    .tbl-scroll{overflow-x:visible}
+    tbody tr{display:flex;flex-wrap:wrap;align-items:center;row-gap:4px;column-gap:8px;padding:11px 13px}
+    tbody td{border:none;padding:0;white-space:normal;text-align:left}
+    td.td-pos{order:1}
+    td.td-name{order:2;flex:1 1 60px}
+    td.td-acts{order:3}
+    td.td-adp{order:4;color:var(--muted);font-size:.74rem}
+    td.td-adp::before{content:"ADP "}
+    td.td-rd{order:5;color:var(--muted);font-size:.74rem}
+    td.td-rd::before{content:"· Rd "}
+    td.td-price{order:6;margin-left:auto;font-size:.95rem}
+    td.td-rng{order:7}
+    .act{width:36px;height:36px;font-size:1.1rem}
+    tbody tr.watched td.td-name{box-shadow:none}
+    tbody tr.watched td:first-child{box-shadow:none}
+    tbody tr.watched{box-shadow:inset 3px 0 0 var(--star)}
+    .slot-list{max-height:none}
+  }
 </style>
 </head>
 <body>
@@ -237,13 +271,13 @@ function renderTable(){
     const isP=picked.has(k), isG=gone.has(k), isW=watch.has(k);
     const tr=document.createElement('tr');
     tr.className=[isG?'gone':'',isP?'picked':'',isW?'watched':''].filter(Boolean).join(' ');
-    tr.innerHTML=`<td>${p.adp}</td>
-      <td><span class="name">${p.name}</span> <span class="rng">${p.team}${p.posRank?' · '+p.posRank:''}</span></td>
-      <td><span class="pos ${p.pos}">${p.pos}</span></td>
-      <td>${p.round}</td>
-      <td class="price">$${p.price}</td>
-      <td class="rng">$${p.lo}–${p.hi}</td>
-      <td><span class="acts">
+    tr.innerHTML=`<td class="td-adp">${p.adp}</td>
+      <td class="td-name"><span class="name">${p.name}</span> <span class="rng">${p.team}${p.posRank?' · '+p.posRank:''}</span></td>
+      <td class="td-pos"><span class="pos ${p.pos}">${p.pos}</span></td>
+      <td class="td-rd">${p.round}</td>
+      <td class="price td-price">$${p.price}</td>
+      <td class="rng td-rng">$${p.lo}–${p.hi}</td>
+      <td class="td-acts"><span class="acts">
         <button class="act star ${isW?'on':''}" data-a="w" title="Watch (highlight target)">${isW?'★':'☆'}</button>
         <button class="act draft ${isP?'on':''}" data-a="d" title="Draft to my team">${isP?'✓':'+'}</button>
         <button class="act gone ${isG?'on':''}" data-a="g" title="Drafted by someone else">✕</button>
