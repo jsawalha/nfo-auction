@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>NFO 2026 Draft Board</title>
+<script>
+  /* set layout class before first paint (no flash). auto = follow screen width. */
+  try{
+    var _v=localStorage.getItem('nfo26_view')||'auto';
+    var _eff=_v==='auto'?(matchMedia('(max-width:640px)').matches?'cards':'table'):_v;
+    if(_eff==='cards')document.documentElement.classList.add('view-cards');
+  }catch(e){}
+</script>
 <style>
   :root{
     --page:#f9f9f7; --surface:#fcfcfb; --surface-2:#f2f1ec;
@@ -110,39 +118,39 @@
   .foot{max-width:1240px;margin:8px auto 40px;padding:0 16px;color:var(--muted);font-size:.75rem}
   .foot b{color:var(--ink-2)}
 
-  /* ---------- phone layout: table rows become stacked cards (no side-scroll) ---------- */
-  @media(max-width:640px){
-    .hd-in{gap:8px}
-    h1{font-size:1.15rem}
-    .hd-stats{width:100%;margin-left:0;gap:5px}
-    .stat{flex:1;min-width:0;padding:5px 3px}
-    .stat .v{font-size:.95rem}
-    .stat .k{font-size:.54rem}
-    .wrap{padding:12px}
-    .filters{gap:6px}
-    input[type=search]{min-width:100%;order:-1}
-    .toggle{flex:1;justify-content:center}
-    table,thead,tbody,tr,td{display:block}
-    table{min-width:0}
-    thead{display:none}
-    .tbl-scroll{overflow-x:visible}
-    tbody tr{display:flex;flex-wrap:wrap;align-items:center;row-gap:4px;column-gap:8px;padding:11px 13px}
-    tbody td{border:none;padding:0;white-space:normal;text-align:left}
-    td.td-pos{order:1}
-    td.td-name{order:2;flex:1 1 60px}
-    td.td-acts{order:3}
-    td.td-adp{order:4;color:var(--muted);font-size:.74rem}
-    td.td-adp::before{content:"ADP "}
-    td.td-rd{order:5;color:var(--muted);font-size:.74rem}
-    td.td-rd::before{content:"· Rd "}
-    td.td-price{order:6;margin-left:auto;font-size:.95rem}
-    td.td-rng{order:7}
-    .act{width:36px;height:36px;font-size:1.1rem}
-    tbody tr.watched td.td-name{box-shadow:none}
-    tbody tr.watched td:first-child{box-shadow:none}
-    tbody tr.watched{box-shadow:inset 3px 0 0 var(--star)}
-    .slot-list{max-height:none}
-  }
+  /* ---------- card layout: table rows become stacked cards (no side-scroll) ----------
+     Driven by a .view-cards class on <html> (set by JS), so it can be forced on any
+     screen size via the Auto/Table/Cards toggle — not only under a media query. */
+  .view-cards .hd-in{gap:8px}
+  .view-cards h1{font-size:1.15rem}
+  .view-cards .hd-stats{width:100%;margin-left:0;gap:5px}
+  .view-cards .stat{flex:1;min-width:0;padding:5px 3px}
+  .view-cards .stat .v{font-size:.95rem}
+  .view-cards .stat .k{font-size:.54rem}
+  .view-cards .wrap{padding:12px}
+  .view-cards .filters{gap:6px}
+  .view-cards input[type=search]{min-width:100%;order:-1}
+  .view-cards .toggle{flex:1;justify-content:center}
+  .view-cards table,.view-cards thead,.view-cards tbody,.view-cards tr,.view-cards td{display:block}
+  .view-cards table{min-width:0}
+  .view-cards thead{display:none}
+  .view-cards .tbl-scroll{overflow-x:visible}
+  .view-cards tbody tr{display:flex;flex-wrap:wrap;align-items:center;row-gap:4px;column-gap:8px;padding:11px 13px}
+  .view-cards tbody td{border:none;padding:0;white-space:normal;text-align:left}
+  .view-cards td.td-pos{order:1}
+  .view-cards td.td-name{order:2;flex:1 1 60px}
+  .view-cards td.td-acts{order:3}
+  .view-cards td.td-adp{order:4;color:var(--muted);font-size:.74rem}
+  .view-cards td.td-adp::before{content:"ADP "}
+  .view-cards td.td-rd{order:5;color:var(--muted);font-size:.74rem}
+  .view-cards td.td-rd::before{content:"· Rd "}
+  .view-cards td.td-price{order:6;margin-left:auto;font-size:.95rem}
+  .view-cards td.td-rng{order:7}
+  .view-cards .act{width:36px;height:36px;font-size:1.1rem}
+  .view-cards tbody tr.watched td.td-name{box-shadow:none}
+  .view-cards tbody tr.watched td:first-child{box-shadow:none}
+  .view-cards tbody tr.watched{box-shadow:inset 3px 0 0 var(--star)}
+  .view-cards .slot-list{max-height:none}
 </style>
 </head>
 <body>
@@ -174,6 +182,11 @@
       <select id="round"><option value="ALL">All rounds</option></select>
       <label class="toggle" id="tHideGone"><input type="checkbox">Hide gone</label>
       <label class="toggle" id="tWatchOnly"><input type="checkbox">★ Watchlist</label>
+      <div class="seg" id="viewSeg" title="Layout">
+        <button data-view="auto">Auto</button>
+        <button data-view="table">Table</button>
+        <button data-view="cards">Cards</button>
+      </div>
     </div>
     <div class="tbl-card">
       <div class="tbl-scroll">
@@ -378,6 +391,21 @@ function wireToggle(id,key){
   el.addEventListener('click',()=>{cb.checked=!cb.checked;filt[key]=cb.checked;el.classList.toggle('on',cb.checked);renderTable();});
 }
 wireToggle('tHideGone','hideGone'); wireToggle('tWatchOnly','watchOnly');
+
+// layout: Auto (follow width) / Table / Cards
+const mq=window.matchMedia('(max-width:640px)');
+let viewPref=localStorage.getItem('nfo26_view')||'auto';
+function applyView(){
+  const eff = viewPref==='auto' ? (mq.matches?'cards':'table') : viewPref;
+  document.documentElement.classList.toggle('view-cards', eff==='cards');
+  document.querySelectorAll('#viewSeg button').forEach(b=>b.classList.toggle('on', b.dataset.view===viewPref));
+}
+try{ mq.addEventListener('change',()=>{ if(viewPref==='auto') applyView(); }); }catch(e){ mq.addListener(()=>{ if(viewPref==='auto') applyView(); }); }
+document.getElementById('viewSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  viewPref=b.dataset.view; localStorage.setItem('nfo26_view',viewPref); applyView();
+});
+applyView();
 document.querySelectorAll('thead th.sortable').forEach(th=>{
   th.addEventListener('click',()=>{
     const k=th.dataset.k;
