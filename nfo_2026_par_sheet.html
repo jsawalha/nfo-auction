@@ -24,48 +24,48 @@
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--page);color:var(--ink);
-    font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+    font:12.5px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif}
   header{background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--shadow);
     position:sticky;top:0;z-index:10}
-  .hd{max-width:1000px;margin:0 auto;padding:14px 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-  h1{font-size:1.25rem;margin:0;letter-spacing:-.02em}
+  .hd{max-width:560px;margin:0 auto;padding:8px 12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  h1{font-size:1.05rem;margin:0;letter-spacing:-.02em}
   .sub{color:var(--muted);font-size:.8rem;margin:2px 0 0}
   .tiles{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
-  .tile{background:var(--surface-2);border:1px solid var(--border);border-radius:9px;
-    padding:6px 12px;text-align:center;min-width:86px}
-  .tile .v{font-size:1.15rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15}
+  .tile{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+    padding:3px 8px;text-align:center;min-width:64px}
+  .tile .v{font-size:.95rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.15}
   .tile .k{font-size:.6rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin-top:2px}
   .tile.good .v{color:var(--good)} .tile.bad .v{color:var(--crit)}
-  .wrap{max-width:1000px;margin:0 auto;padding:16px}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
-    box-shadow:var(--shadow);padding:14px;margin-bottom:16px}
+  .wrap{max-width:560px;margin:0 auto;padding:10px}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    box-shadow:var(--shadow);padding:8px;margin-bottom:10px}
   table{width:100%;border-collapse:collapse}
-  th{font-size:.64rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);
-    text-align:left;padding:6px;font-weight:700;border-bottom:1px solid var(--axis)}
+  th{font-size:.58rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+    text-align:left;padding:3px 4px;font-weight:700;border-bottom:1px solid var(--axis)}
   th.r,td.r{text-align:right}
-  td{padding:4px 6px;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums}
-  tr.grp td{background:var(--surface-2);font-weight:700;font-size:.7rem;text-transform:uppercase;
-    letter-spacing:.06em;color:var(--ink-2);border:none;padding:7px 6px}
+  td{padding:1px 4px;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums}
+  tr.grp td{background:var(--surface-2);font-weight:700;font-size:.6rem;text-transform:uppercase;
+    letter-spacing:.05em;color:var(--ink-2);border:none;padding:3px 4px}
   tr.tot td{font-weight:700;background:color-mix(in srgb,var(--accent) 7%,transparent);
     border-top:1px solid var(--axis)}
   tr.filled{background:color-mix(in srgb,var(--good) 7%,transparent)}
   input,select{font:inherit;background:var(--surface);color:var(--ink);
-    border:1px solid var(--border);border-radius:7px;padding:6px 8px}
+    border:1px solid var(--border);border-radius:5px;padding:2px 4px;font-size:12px}
   input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
-  input.bud{width:74px;text-align:right;font-weight:600}
-  input.price{width:74px;text-align:right}
-  input.name{width:100%;min-width:120px}
-  select.pos{width:74px;font-weight:700}
+  input.bud{width:50px;text-align:right;font-weight:600}
+  input.price{width:50px;text-align:right}
+  input.name{width:100%;min-width:90px}
+  select.pos{width:52px;font-weight:700}
   .diff{font-weight:700;font-variant-numeric:tabular-nums}
   .diff.good{color:var(--good)} .diff.bad{color:var(--crit)}
   .num{width:26px;color:var(--muted);font-size:.78rem}
   .btn{border:1px solid var(--border);background:var(--surface);color:var(--ink-2);
-    border-radius:8px;padding:8px 12px;cursor:pointer;font:inherit;font-size:.82rem}
+    border-radius:7px;padding:4px 9px;cursor:pointer;font:inherit;font-size:.74rem;text-decoration:none}
   .btn:hover{border-color:var(--axis);color:var(--ink)}
   .btn.warn:hover{color:var(--crit);border-color:var(--crit)}
-  .bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-  .note{color:var(--muted);font-size:.78rem;margin:10px 0 0}
-  .alert{padding:8px 12px;border-radius:8px;font-size:.82rem;margin-top:10px;display:none}
+  .bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+  .note{color:var(--muted);font-size:.68rem;margin:6px 0 0}
+  .alert{padding:5px 8px;border-radius:7px;font-size:.72rem;margin-top:6px;display:none}
   .alert.show{display:block}
   .alert.bad{background:color-mix(in srgb,var(--crit) 12%,transparent);color:var(--crit)}
   .alert.ok{background:color-mix(in srgb,var(--good) 12%,transparent);color:var(--good)}
@@ -161,7 +161,7 @@ function render(){
       const price=num(s.price), filled=price!==null;
       const d = filled ? (s.b - price) : 0;
       gPlan+=s.b; if(filled){ gSpent+=price; gDiff+=d; }
-      const tr=document.createElement('tr'); if(filled) tr.className='filled';
+      const tr=document.createElement('tr'); tr.dataset.row=i; if(filled) tr.className='filled';
       tr.innerHTML=
         '<td class="num">'+i2+'</td>'+
         '<td><select class="pos" data-i="'+i+'" data-f="pos">'+
@@ -169,17 +169,23 @@ function render(){
         '<td class="r"><input class="bud" type="number" min="0" data-i="'+i+'" data-f="b" value="'+s.b+'"></td>'+
         '<td><input class="name" list="plist" placeholder="player…" data-i="'+i+'" data-f="name" value="'+(s.name||'').replace(/"/g,'&quot;')+'"></td>'+
         '<td class="r"><input class="price" type="number" min="0" placeholder="—" data-i="'+i+'" data-f="price" value="'+(s.price===''?'':s.price)+'"></td>'+
-        '<td class="r"><span class="diff '+(d>0?'good':(d<0?'bad':''))+'">'+
+        '<td class="r"><span class="diff" data-diff="'+i+'">'+
           (filled ? (d>0?'+':'')+d : '') + '</span></td>';
       tb.appendChild(tr);
     });
     planTot+=gPlan; spentTot+=gSpent; diffTot+=gDiff;
-    const tot=document.createElement('tr'); tot.className='tot';
-    tot.innerHTML='<td class="num"></td><td>TOTAL</td><td class="r">$'+gPlan+'</td><td></td>'+
-      '<td class="r">$'+gSpent+'</td><td class="r">'+(gDiff===0?'0':(gDiff>0?'+':'')+gDiff)+'</td>';
+    const tot=document.createElement('tr'); tot.className='tot'; tot.dataset.tot=grp;
+    tot.innerHTML='<td class="num"></td><td>TOTAL</td><td class="r" data-tp="'+grp+'">$'+gPlan+'</td><td></td>'+
+      '<td class="r" data-ts="'+grp+'">$'+gSpent+'</td><td class="r" data-td="'+grp+'">'+
+      (gDiff===0?'0':(gDiff>0?'+':'')+gDiff)+'</td>';
     tb.appendChild(tot);
   });
 
+  updateSummary(planTot, spentTot, diffTot);
+  save();
+}
+
+function updateSummary(planTot, spentTot, diffTot){
   document.getElementById('tPlan').textContent='$'+planTot;
   document.getElementById('tSpent').textContent='$'+spentTot;
   document.getElementById('tLeft').textContent='$'+(BUDGET-spentTot);
@@ -201,9 +207,31 @@ function render(){
     al.innerHTML='Plan $'+planTot+' · spent $'+spentTot+' · <b>$'+(BUDGET-spentTot)+'</b> left for '+
       slots.filter(s=>num(s.price)===null).length+' open slot(s).';
   } else { al.className='alert'; al.innerHTML=''; }
-  save();
 }
 
+function recalc(){
+  let planTot=0, spentTot=0, diffTot=0;
+  ['S','B'].forEach(grp=>{
+    let gPlan=0,gSpent=0,gDiff=0;
+    slots.forEach((s,i)=>{
+      if(s.g!==grp) return;
+      const price=num(s.price), filled=price!==null, d=filled?(s.b-price):0;
+      gPlan+=s.b; if(filled){ gSpent+=price; gDiff+=d; }
+      const cell=document.querySelector('[data-diff="'+i+'"]');
+      if(cell){ cell.textContent = filled ? ((d>0?'+':'')+d) : '';
+                cell.className = 'diff '+(d>0?'good':(d<0?'bad':'')); }
+      const row=document.querySelector('[data-row="'+i+'"]');
+      if(row) row.className = filled ? 'filled' : '';
+    });
+    planTot+=gPlan; spentTot+=gSpent; diffTot+=gDiff;
+    const tp=document.querySelector('[data-tp="'+grp+'"]'); if(tp) tp.textContent='$'+gPlan;
+    const ts=document.querySelector('[data-ts="'+grp+'"]'); if(ts) ts.textContent='$'+gSpent;
+    const td=document.querySelector('[data-td="'+grp+'"]');
+    if(td) td.textContent=(gDiff===0?'0':(gDiff>0?'+':'')+gDiff);
+  });
+  updateSummary(planTot, spentTot, diffTot);
+  save();
+}
 document.getElementById('rows').addEventListener('input', e=>{
   const el=e.target, i=el.dataset.i, f=el.dataset.f;
   if(i===undefined||!f) return;
@@ -216,10 +244,8 @@ document.getElementById('rows').addEventListener('input', e=>{
     if(m && !s.price && !s._auto){ s._auto=true; }        // remember we saw a model match
   }
   else if(f==='price'){ s.price = el.value===''?'':(num(el.value)===null?'':num(el.value)); }
-  if(f==='b'||f==='pos'||f==='price') render(); else save();
+  recalc();   // update numbers in place — never rebuild the row you're typing in
 });
-// re-render on blur so name edits refresh totals/highlighting without stealing focus mid-type
-document.getElementById('rows').addEventListener('change', e=>{ if(e.target.dataset.f==='name') render(); });
 
 document.getElementById('resetPlan').addEventListener('click',()=>{
   if(!confirm('Reset the budget plan to the default 14 slots? (players/prices kept)')) return;
