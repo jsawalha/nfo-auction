@@ -131,6 +131,20 @@
   .clear{width:100%;margin-top:12px;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink-2);cursor:pointer;font:inherit}
   .clear:hover{color:var(--crit);border-color:var(--crit)}
   .watch-empty{color:var(--muted);font-size:.82rem}
+  .slot-wrap{margin-top:10px}
+  table.slots{width:100%;border-collapse:collapse;font-size:.74rem}
+  table.slots th{font-size:.6rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);
+    text-align:right;padding:2px 3px;font-weight:600}
+  table.slots th.l,table.slots td.l{text-align:left}
+  table.slots td{padding:3px;border-bottom:1px solid var(--grid);font-variant-numeric:tabular-nums;text-align:right}
+  table.slots tr.grp td{background:var(--surface-2);font-weight:700;font-size:.66rem;
+    text-transform:uppercase;letter-spacing:.04em;color:var(--ink-2);border:none;padding:5px 3px}
+  table.slots tr.tot td{font-weight:700;border-top:1px solid var(--axis);border-bottom:none}
+  table.slots tr.filled{background:color-mix(in srgb,var(--good) 8%,transparent)}
+  .cell-btn{border:0;background:transparent;color:inherit;font:inherit;cursor:pointer;padding:0;
+    text-decoration:underline dotted}
+  .cell-btn:hover{color:var(--accent)}
+  .nm{max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:bottom}
   .par-big{font-size:1.5rem;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin-top:8px}
   .par-big.sur{color:var(--good)} .par-big.def{color:var(--crit)}
   .pick .good{color:var(--good);font-weight:600}
@@ -254,11 +268,11 @@
       <div class="budget-row"><span>Spent <b id="rSpent">$0</b></span><span>Left <b id="rLeft">$200</b></span></div>
       <div class="maxbid" id="rMax">Max bid on next player: <b>$187</b></div>
       <div class="par-big" id="parBig">—</div>
-      <div class="maxbid" id="parSub">Targets default to the model price — tap a price below to change it.</div>
-      <div class="reqs" id="reqs"></div>
+      <div class="maxbid" id="parSub">Tap a <b>budget</b> or <b>POS</b> to edit your plan before the draft.</div>
       <div class="warn" id="warn"></div>
-      <div class="slot-list" id="picks"></div>
-      <button class="clear" id="clear">Clear roster</button>
+      <div class="slot-wrap" id="picks"></div>
+      <button class="clear" id="clear">Clear drafted players</button>
+      <button class="clear" id="resetTpl">Reset budget plan</button>
     </div>
     <div class="card">
       <h2>★ Watchlist <span class="sub" id="wCount">0</span></h2>
@@ -283,6 +297,15 @@ const BUDGET = 200, ROSTER_MAX = 14;
 const REQS = { QB:[1,1], RB:[2,4], WR:[2,4], TE:[1,3] };
 const load = k => { try { return new Set(JSON.parse(localStorage.getItem(k)||'[]')); } catch(e){ return new Set(); } };
 let picked = load('nfo26_roster'), gone = load('nfo26_gone'), watch = load('nfo26_watch');
+// 14 roster slots you budget BEFORE the draft (8 starters + 6 bench)
+const DEFAULT_SLOTS=[
+ {g:'S',pos:'RB',b:52},{g:'S',pos:'RB',b:42},{g:'S',pos:'RB',b:25},{g:'S',pos:'RB',b:6},
+ {g:'S',pos:'WR',b:30},{g:'S',pos:'WR',b:16},{g:'S',pos:'TE',b:1},{g:'S',pos:'QB',b:5},
+ {g:'B',pos:'RB',b:6},{g:'B',pos:'RB',b:1},{g:'B',pos:'WR',b:1},{g:'B',pos:'WR',b:6},
+ {g:'B',pos:'WR',b:8},{g:'B',pos:'QB',b:1}];
+let slots=[];
+try{ slots=JSON.parse(localStorage.getItem('nfo26_slots')||'null')||DEFAULT_SLOTS.map(x=>({...x})); }
+catch(e){ slots=DEFAULT_SLOTS.map(x=>({...x})); }
 let targets={}, paidMap={};
 try{ targets=JSON.parse(localStorage.getItem('nfo26_targets')||'{}'); }catch(e){ targets={}; }
 try{ paidMap=JSON.parse(localStorage.getItem('nfo26_paid')||'{}'); }catch(e){ paidMap={}; }
@@ -340,6 +363,27 @@ const BYK={}; DATA.forEach(p=>{ BYK[keyOf(p)]=p; });
 const targetOf = p => targets[keyOf(p)]!==undefined ? targets[keyOf(p)] : p.price;
 const paidOf   = p => paidMap[keyOf(p)];
 const spentOn  = p => paidOf(p)!==undefined ? paidOf(p) : targetOf(p);
+const POSES=['RB','WR','TE','QB'];
+function editSlotBudget(i){
+  const v=prompt('Budget for slot '+(i+1)+' ('+slots[i].pos+')', String(slots[i].b));
+  if(v===null) return;
+  const n=parseInt(v,10);
+  if(!isNaN(n)&&n>=0){ slots[i].b=n; save(); renderRoster(); }
+}
+function cycleSlotPos(i){
+  slots[i].pos=POSES[(POSES.indexOf(slots[i].pos)+1)%POSES.length];
+  save(); renderRoster();
+}
+// fill slots: for each position, the priciest player takes the highest-budget slot
+function assignSlots(list){
+  const filled=slots.map(()=>null), used=new Set();
+  POSES.forEach(pos=>{
+    const idxs=slots.map((s,i)=>[s,i]).filter(x=>x[0].pos===pos).map(x=>x[1]);
+    const plrs=list.filter(p=>p.pos===pos).sort((a,b)=>spentOn(b)-spentOn(a));
+    idxs.forEach((si,j)=>{ if(plrs[j]){ filled[si]=plrs[j]; used.add(keyOf(plrs[j])); } });
+  });
+  return {filled, extra:list.filter(p=>!used.has(keyOf(p)))};
+}
 function setTarget(k){
   const p=BYK[k]; if(!p) return;
   const v=prompt('Target price for '+p.name+'   (model $'+p.price+')', String(targetOf(p)));
@@ -351,6 +395,7 @@ function save(){
   localStorage.setItem('nfo26_roster', JSON.stringify([...picked]));
   localStorage.setItem('nfo26_gone', JSON.stringify([...gone]));
   localStorage.setItem('nfo26_watch', JSON.stringify([...watch]));
+  localStorage.setItem('nfo26_slots', JSON.stringify(slots));
   localStorage.setItem('nfo26_targets', JSON.stringify(targets));
   localStorage.setItem('nfo26_paid', JSON.stringify(paidMap));
 }
@@ -453,32 +498,44 @@ function renderRoster(){
   }
 
   const wrap=document.getElementById('picks'); wrap.innerHTML='';
-  let tTot=0, pTot=0;
-  for(const pos of ['QB','RB','WR','TE']){
-    const grp=list.filter(p=>p.pos===pos).sort((a,b)=>spentOn(b)-spentOn(a));
-    if(!grp.length)continue;
-    const gsum=grp.reduce((x,p)=>x+spentOn(p),0);
-    const g=document.createElement('div'); g.className='slot-group';
-    g.innerHTML=`<div class="slot-h">${pos} · ${grp.length} · $${gsum}</div>`;
-    grp.forEach(p=>{
-      const t=targetOf(p), a=spentOn(p), d=t-a;
-      tTot+=t; pTot+=a;
+  const asg=assignSlots(list);
+  const tbl=document.createElement('table'); tbl.className='slots';
+  let html='<tr><th class="l">Pos</th><th>Budget</th><th class="l">Player</th><th>Price</th><th>Diff</th></tr>';
+  let bTot=0,pTot=0,dTot=0;
+  [['S','Starters'],['B','Bench']].forEach(([grp,label])=>{
+    html+='<tr class="grp"><td colspan="5">'+label+'</td></tr>';
+    let gb=0,gp=0;
+    slots.forEach((sl,i)=>{
+      if(sl.g!==grp) return;
+      const p=asg.filled[i], paidv=p?spentOn(p):null, d=p?(sl.b-paidv):0;
+      gb+=sl.b; if(p){ gp+=paidv; dTot+=d; }
       const cls=d>0?'good':(d<0?'bad':'');
-      const row=document.createElement('div'); row.className='pick';
-      row.innerHTML=`<span><span class="pos ${p.pos}">${p.pos}</span> ${p.name} <button class="tgt">tgt $${t}</button></span>`+
-        `<span><span class="pp">$${a}</span> <span class="${cls}">${d===0?'—':(d>0?'+$':'-$')+Math.abs(d)}</span> <button class="x" title="remove">✕</button></span>`;
-      row.querySelector('.tgt').addEventListener('click',()=>setTarget(keyOf(p)));
-      row.querySelector('.x').addEventListener('click',()=>act(keyOf(p),'d'));
-      g.appendChild(row);
+      html+='<tr class="'+(p?'filled':'')+'">'+
+        '<td class="l"><button class="cell-btn" data-pos="'+i+'"><span class="pos '+sl.pos+'">'+sl.pos+'</span></button></td>'+
+        '<td><button class="cell-btn" data-bud="'+i+'">$'+sl.b+'</button></td>'+
+        '<td class="l"><span class="nm">'+(p?p.name:'<span class="rng">—</span>')+'</span></td>'+
+        '<td>'+(p?'$'+paidv:'')+'</td>'+
+        '<td class="'+cls+'">'+(p?(d===0?'0':(d>0?'+':'-')+Math.abs(d)):'')+'</td></tr>';
     });
-    wrap.appendChild(g);
+    bTot+=gb; pTot+=gp;
+    html+='<tr class="tot"><td class="l">TOTAL</td><td>$'+gb+'</td><td class="l"></td><td>$'+gp+'</td><td></td></tr>';
+  });
+  if(asg.extra.length){
+    html+='<tr class="grp"><td colspan="5">Unslotted (no matching slot)</td></tr>';
+    asg.extra.forEach(p=>{ pTot+=spentOn(p);
+      html+='<tr><td class="l"><span class="pos '+p.pos+'">'+p.pos+'</span></td><td></td>'+
+        '<td class="l"><span class="nm">'+p.name+'</span></td><td>$'+spentOn(p)+'</td><td></td></tr>'; });
   }
-  const par=tTot-pTot, pb=document.getElementById('parBig');
-  pb.className='par-big '+(par>0?'sur':(par<0?'def':''));
-  pb.textContent = list.length ? ((par>0?'+$':(par<0?'-$':'$'))+Math.abs(par)+(par>0?' surplus':(par<0?' deficit':' on par'))) : '—';
-  document.getElementById('parSub').innerHTML = list.length
-    ? 'Target total <b>$'+tTot+'</b> · spent <b>$'+pTot+'</b> · <b>$'+(BUDGET-pTot)+'</b> left of $'+BUDGET
-    : 'Targets default to the model price — tap a price below to change it.';
+  tbl.innerHTML=html; wrap.appendChild(tbl);
+  tbl.querySelectorAll('[data-bud]').forEach(b=>b.addEventListener('click',()=>editSlotBudget(+b.dataset.bud)));
+  tbl.querySelectorAll('[data-pos]').forEach(b=>b.addEventListener('click',()=>cycleSlotPos(+b.dataset.pos)));
+
+  const pb=document.getElementById('parBig');
+  pb.className='par-big '+(dTot>0?'sur':(dTot<0?'def':''));
+  pb.textContent = list.length ? ((dTot>0?'+$':(dTot<0?'-$':'$'))+Math.abs(dTot)+(dTot>0?' under plan':(dTot<0?' over plan':' on plan'))) : '—';
+  document.getElementById('parSub').innerHTML =
+    'Plan <b>$'+bTot+'</b> of $'+BUDGET+' · spent <b>$'+pTot+'</b> · <b>$'+(BUDGET-pTot)+'</b> left'
+    + (bTot!==BUDGET ? ' <span style="color:var(--warn)">(plan ≠ $'+BUDGET+')</span>' : '');
 
   const w=document.getElementById('warn');
   const canStart=counts.QB>=1&&counts.RB>=2&&counts.WR>=2&&counts.TE>=1&&n>=8;
@@ -552,6 +609,11 @@ document.querySelectorAll('thead th.sortable').forEach(th=>{
     th.classList.add(sort.dir===1?'asc':'desc');
     renderTable();
   });
+});
+document.getElementById('resetTpl').addEventListener('click',()=>{
+  if(confirm('Reset the budget plan back to the default 14 slots?')){
+    slots=DEFAULT_SLOTS.map(x=>({...x})); save(); renderRoster();
+  }
 });
 document.getElementById('clear').addEventListener('click',()=>{
   if(confirm('Clear your drafted roster? (Watchlist and crossed-off players stay.)')){picked.clear();save();renderTable();renderRoster();}
