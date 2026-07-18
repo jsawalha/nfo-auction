@@ -57,6 +57,18 @@
   .toggle input{display:none}
   .metric-note{margin:-4px 0 12px;font-size:.78rem;color:var(--muted)}
   .metric-note b{color:var(--ink-2)}
+  .mkt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surface);
+    border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin:0 0 12px;box-shadow:var(--shadow)}
+  .mkt-lab{font-size:.8rem;font-weight:600;color:var(--ink-2)}
+  .mkt input{width:88px;padding:6px 8px}
+  .mkt button{border:1px solid var(--border);background:var(--surface);color:var(--ink-2);
+    border-radius:7px;padding:6px 9px;cursor:pointer;font:inherit;font-size:.78rem}
+  .mkt button:hover{border-color:var(--axis)}
+  .mkt-out{font-size:.82rem;color:var(--ink-2)}
+  .mkt-out .hot{color:var(--crit);font-weight:700}
+  .mkt-out .cool{color:var(--accent);font-weight:700}
+  .mkt-out .bal{color:var(--good);font-weight:700}
+  .mkt-out .dim{color:var(--muted)}
 
   .tbl-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
   .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -201,6 +213,13 @@
       </div>
     </div>
     <p class="metric-note" id="metricNote"></p>
+    <div class="mkt" id="mkt">
+      <span class="mkt-lab">📊 Market</span>
+      <input type="number" id="mktIn" min="1" placeholder="sale $" inputmode="numeric">
+      <button id="mktUndo" title="remove last">↶</button>
+      <button id="mktReset" title="clear all">clear</button>
+      <span class="mkt-out" id="mktOut"></span>
+    </div>
     <div class="tbl-card">
       <div class="tbl-scroll">
         <table id="tbl">
@@ -270,6 +289,39 @@ const METRIC_NOTE = {
   median: 'Median — the typical price (ignores a few runaway bidding wars). Often the more honest "expected" cost.',
   p90:    '90th percentile — a hot-room, worst-case price. Budget against this to stress-test whether your roster still fits.'
 };
+
+// ---- market tracker: how fast is the room spending? ----
+const POT = BUDGET*10, FULL_DRAFT = 140;
+// historical cumulative % of league money spent by % of players drafted (2021-25 avg)
+const PACE = [[0,0],[.10,.29],[.20,.53],[.30,.69],[.40,.79],[.50,.87],[.60,.92],[.70,.95],[.80,.97],[.90,.99],[1,1]];
+function expectedPct(frac){
+  for(let i=1;i<PACE.length;i++){
+    if(frac<=PACE[i][0]){
+      const [x0,y0]=PACE[i-1],[x1,y1]=PACE[i];
+      return y0+(y1-y0)*((frac-x0)/(x1-x0||1));
+    }
+  }
+  return 1;
+}
+let sales=[];
+try{ sales=JSON.parse(localStorage.getItem('nfo26_sales')||'[]'); }catch(e){ sales=[]; }
+function saveSales(){ localStorage.setItem('nfo26_sales', JSON.stringify(sales)); }
+function renderMarket(){
+  const out=document.getElementById('mktOut');
+  const n=sales.length, spent=sales.reduce((a,b)=>a+b,0);
+  if(!n){ out.innerHTML='<span class="dim">Type each sale price + Enter. After ~15 sales you\'ll get a read on the room.</span>'; return; }
+  const actual=spent/POT, exp=expectedPct(n/FULL_DRAFT), d=(actual-exp)*100;
+  let cls='bal', label='⚖️ BALANCED', tail='prices tracking the model';
+  if(d>=4){ cls='hot'; label='🔥 VERY HOT'; tail='endgame will be dirt cheap — your late dollars are gold'; }
+  else if(d>=2){ cls='hot'; label='🔥 HOT'; tail='money is draining fast; the back half will go cheap'; }
+  else if(d<=-4){ cls='cool'; label='🧊 VERY COOL'; tail='lots of money left — late players will NOT be bargains'; }
+  else if(d<=-2){ cls='cool'; label='🧊 COOL'; tail='cash still in the room; don\'t count on late discounts'; }
+  const lateEst=Math.max(1.5, Math.min(4.5, 3.0 - d*0.17));
+  const conf = n<15 ? ' <span class="dim">(early — needs ~15+ sales)</span>' : '';
+  out.innerHTML='<b>'+n+'</b> sold · <b>$'+spent+'</b> ('+(actual*100).toFixed(0)+'% of pot) · '+
+    'expected '+(exp*100).toFixed(0)+'% → <span class="'+cls+'">'+label+'</span> '+
+    '<span class="dim">'+tail+' · late rounds trending ~$'+lateEst.toFixed(1)+'</span>'+conf;
+}
 
 const keyOf = p => p.adp+'|'+p.name;
 function save(){
@@ -457,6 +509,21 @@ document.querySelectorAll('thead th.sortable').forEach(th=>{
 document.getElementById('clear').addEventListener('click',()=>{
   if(confirm('Clear your drafted roster? (Watchlist and crossed-off players stay.)')){picked.clear();save();renderTable();renderRoster();}
 });
+
+(function(){
+  const inp=document.getElementById('mktIn');
+  inp.addEventListener('keydown',e=>{
+    if(e.key!=='Enter') return;
+    const v=parseInt(inp.value,10);
+    if(!isNaN(v)&&v>=1){ sales.push(v); saveSales(); renderMarket(); }
+    inp.value=''; inp.focus();
+  });
+  document.getElementById('mktUndo').addEventListener('click',()=>{ sales.pop(); saveSales(); renderMarket(); });
+  document.getElementById('mktReset').addEventListener('click',()=>{
+    if(sales.length && confirm('Clear the market tracker?')){ sales=[]; saveSales(); renderMarket(); }
+  });
+  renderMarket();
+})();
 
 applyMetric();   // sets the metric UI then renders table + roster
 </script>
