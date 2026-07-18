@@ -136,8 +136,8 @@
   .par-row{display:flex;justify-content:space-between;gap:8px;padding:4px 8px;border-radius:6px;font-size:.8rem}
   .par-row:hover{background:var(--surface-2)}
   .par-row .v{font-variant-numeric:tabular-nums}
-  .par-row .good{color:var(--good);font-weight:600}
-  .par-row .bad{color:var(--crit);font-weight:600}
+  .pick .good{color:var(--good);font-weight:600}
+  .pick .bad{color:var(--crit);font-weight:600}
   .tgt-btn{border:0;background:transparent;cursor:pointer;font-size:.85rem;padding:0 3px;color:var(--muted)}
   .tgt-btn:hover{color:var(--accent)}
   .foot{max-width:1240px;margin:8px auto 40px;padding:0 16px;color:var(--muted);font-size:.75rem}
@@ -251,20 +251,16 @@
 
   <aside class="side">
     <div class="card">
-      <h2>My Roster <span class="sub" id="rCount">0 / 14</span></h2>
+      <h2>My Roster &amp; Par <span class="sub" id="rCount">0 / 14</span></h2>
       <div class="meter" id="meter"><i style="width:0%"></i></div>
       <div class="budget-row"><span>Spent <b id="rSpent">$0</b></span><span>Left <b id="rLeft">$200</b></span></div>
       <div class="maxbid" id="rMax">Max bid on next player: <b>$187</b></div>
+      <div class="par-big" id="parBig">—</div>
+      <div class="maxbid" id="parSub">Targets default to the model price — click 🎯 in the watchlist to set your own.</div>
       <div class="reqs" id="reqs"></div>
       <div class="warn" id="warn"></div>
       <div class="slot-list" id="picks"></div>
       <button class="clear" id="clear">Clear roster</button>
-    </div>
-    <div class="card">
-      <h2>🎯 Par sheet <span class="sub" id="parHead"></span></h2>
-      <div class="par-big" id="parBig">—</div>
-      <div class="maxbid" id="parSub">Targets default to the model price. Click a 🎯 in the watchlist to set your own.</div>
-      <div class="slot-list" id="parList"></div>
     </div>
     <div class="card">
       <h2>★ Watchlist <span class="sub" id="wCount">0</span></h2>
@@ -296,7 +292,6 @@ try{ paid=JSON.parse(localStorage.getItem('nfo26_paid')||'{}'); }catch(e){ paid=
 let sort = {k:'adp', dir:1};
 let filt = {q:'', pos:'ALL', round:'ALL', hideGone:false, watchOnly:false};
 
-const BYK={}; DATA.forEach(p=>{ BYK[keyOf(p)]=p; });
 const rounds=[...new Set(DATA.map(p=>p.round))].sort((a,b)=>a-b);
 const rSel=document.getElementById('round');
 rounds.forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent='Round '+r+' (ADP '+((r-1)*12+1)+'-'+(r*12)+')';rSel.appendChild(o);});
@@ -344,6 +339,7 @@ function renderMarket(){
 }
 
 const keyOf = p => p.adp+'|'+p.name;
+const BYK={}; DATA.forEach(p=>{ BYK[keyOf(p)]=p; });
 function save(){
   localStorage.setItem('nfo26_roster', JSON.stringify([...picked]));
   localStorage.setItem('nfo26_gone', JSON.stringify([...gone]));
@@ -459,19 +455,33 @@ function renderRoster(){
   }
 
   const wrap=document.getElementById('picks'); wrap.innerHTML='';
+  const spentOn = p => paidOf(p)!==undefined ? paidOf(p) : targetOf(p);
+  let tTot=0, pTot=0;
   for(const pos of ['QB','RB','WR','TE']){
-    const grp=list.filter(p=>p.pos===pos).sort((a,b)=>b.price-a.price);
+    const grp=list.filter(p=>p.pos===pos).sort((a,b)=>spentOn(b)-spentOn(a));
     if(!grp.length)continue;
+    const gsum=grp.reduce((s,p)=>s+spentOn(p),0);
     const g=document.createElement('div'); g.className='slot-group';
-    g.innerHTML=`<div class="slot-h">${pos} · ${grp.length}</div>`;
+    g.innerHTML=`<div class="slot-h">${pos} · ${grp.length} · $${gsum}</div>`;
     grp.forEach(p=>{
+      const t=targetOf(p), a=spentOn(p), d=t-a;
+      tTot+=t; pTot+=a;
+      const cls=d>0?'good':(d<0?'bad':'');
       const row=document.createElement('div'); row.className='pick';
-      row.innerHTML=`<span>${p.name} <span class="rng">${p.team}</span></span><span><span class="pp">$${pr(p)}</span> <button class="x" title="remove">✕</button></span>`;
+      row.innerHTML=`<span><span class="pos ${p.pos}">${p.pos}</span> ${p.name} <span class="rng">tgt $${t}</span></span>`+
+        `<span><span class="pp">$${a}</span> <span class="${cls}">${d===0?'—':(d>0?'+$':'-$')+Math.abs(d)}</span> <button class="x" title="remove">✕</button></span>`;
       row.querySelector('.x').addEventListener('click',()=>act(keyOf(p),'d'));
       g.appendChild(row);
     });
     wrap.appendChild(g);
   }
+  // ---- par summary (your targets vs what you actually paid) ----
+  const par=tTot-pTot, pb=document.getElementById('parBig');
+  pb.className='par-big '+(par>0?'sur':(par<0?'def':''));
+  pb.textContent = list.length ? ((par>0?'+$':(par<0?'-$':'$'))+Math.abs(par)+(par>0?' surplus':(par<0?' deficit':' on par'))) : '—';
+  document.getElementById('parSub').innerHTML = list.length
+    ? 'Target total <b>$'+tTot+'</b> · spent <b>$'+pTot+'</b> · <b>$'+(BUDGET-pTot)+'</b> left of $'+BUDGET
+    : 'Targets default to the model price — click 🎯 in the watchlist to set your own.';
 
   const w=document.getElementById('warn');
   const canStart=counts.QB>=1&&counts.RB>=2&&counts.WR>=2&&counts.TE>=1&&n>=8;
@@ -484,27 +494,6 @@ function renderRoster(){
     if(counts.WR<2)need.push((2-counts.WR)+' WR'); if(counts.TE<1)need.push('1 TE');
     w.className='warn show info'; w.textContent='Still need for a legal lineup: '+(need.join(', ')||('+'+(8-n)+' starters'));
   } else { w.className='warn'; w.textContent=''; }
-
-  // ---- par sheet ----
-  const pl=document.getElementById('parList'); pl.innerHTML='';
-  let tTot=0, pTot=0;
-  list.slice().sort((a,b)=>(paidOf(b)||0)-(paidOf(a)||0)).forEach(p=>{
-    const t=targetOf(p), a=paidOf(p)!==undefined?paidOf(p):t, d=t-a;
-    tTot+=t; pTot+=a;
-    const cls=d>0?'good':(d<0?'bad':'');
-    const row=document.createElement('div'); row.className='par-row';
-    row.innerHTML='<span>'+p.name+'</span><span class="v">tgt $'+t+' · paid $'+a+
-      ' <span class="'+cls+'">'+(d>0?'+':'')+(d===0?'—':'$'+Math.abs(d))+'</span></span>';
-    pl.appendChild(row);
-  });
-  const par=tTot-pTot;
-  const pb=document.getElementById('parBig');
-  pb.className='par-big '+(par>0?'sur':(par<0?'def':''));
-  pb.textContent = list.length ? ((par>0?'+$':(par<0?'-$':'$'))+Math.abs(par)+(par>0?' surplus':(par<0?' deficit':' on par'))) : '—';
-  document.getElementById('parHead').textContent = list.length? list.length+' drafted' : '';
-  document.getElementById('parSub').innerHTML = list.length
-    ? 'Target total <b>$'+tTot+'</b> · actually spent <b>$'+pTot+'</b>'
-    : 'Targets default to the model price. Click a 🎯 in the watchlist to set your own.';
 
   // watchlist (watched, not yet drafted by anyone)
   const wl=DATA.filter(p=>watch.has(keyOf(p))&&!picked.has(keyOf(p))&&!gone.has(keyOf(p)));
