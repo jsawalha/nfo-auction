@@ -57,6 +57,10 @@
   .toggle input{display:none}
   .metric-note{margin:-4px 0 12px;font-size:.78rem;color:var(--muted)}
   .metric-note b{color:var(--ink-2)}
+  .infl-bar{margin:-8px 0 12px;font-size:.78rem;color:var(--ink-2)}
+  .infl-bar .up{color:var(--crit);font-weight:600}
+  .infl-bar .dn{color:var(--good);font-weight:600}
+  .infl-bar .none{color:var(--muted)}
 
   .tbl-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
   .tbl-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -189,6 +193,7 @@
       <select id="round"><option value="ALL">All rounds</option></select>
       <label class="toggle" id="tHideGone"><input type="checkbox">Hide gone</label>
       <label class="toggle" id="tWatchOnly"><input type="checkbox">★ Watchlist</label>
+      <label class="toggle on" id="tAnchor"><input type="checkbox" checked>⚓ Anchor</label>
       <div class="seg" id="metricSeg" title="Which price to show">
         <button data-metric="mean">Mean</button>
         <button data-metric="median">Median</button>
@@ -201,6 +206,7 @@
       </div>
     </div>
     <p class="metric-note" id="metricNote"></p>
+    <p class="infl-bar" id="inflBar"></p>
     <div class="tbl-card">
       <div class="tbl-scroll">
         <table id="tbl">
@@ -255,16 +261,41 @@ const BUDGET = 200, ROSTER_MAX = 14;
 const REQS = { QB:[1,1], RB:[2,4], WR:[2,4], TE:[1,3] };
 const load = k => { try { return new Set(JSON.parse(localStorage.getItem(k)||'[]')); } catch(e){ return new Set(); } };
 let picked = load('nfo26_roster'), gone = load('nfo26_gone'), watch = load('nfo26_watch');
+let sold = {}, soldSeq = [];
+try { sold = JSON.parse(localStorage.getItem('nfo26_sold')||'{}'); } catch(e){ sold={}; }
+try { soldSeq = JSON.parse(localStorage.getItem('nfo26_soldseq')||'[]'); } catch(e){ soldSeq=[]; }
+let anchorOn = localStorage.getItem('nfo26_anchor') !== '0';
+// measured premium the FIRST player off the board at a position pays (from the hot-spot analysis)
+const OPENER = {WR:6.5, TE:2.1, QB:1.1, RB:0};
 let sort = {k:'adp', dir:1};
 let filt = {q:'', pos:'ALL', round:'ALL', hideGone:false, watchOnly:false};
 
+DATA.forEach(p=>{ BYKEY[keyOf(p)]=p; });
 const rounds=[...new Set(DATA.map(p=>p.round))].sort((a,b)=>a-b);
 const rSel=document.getElementById('round');
 rounds.forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent='Round '+r+' (ADP '+((r-1)*12+1)+'-'+(r*12)+')';rSel.appendChild(o);});
 
 // which price metric is displayed & used for all budget math
 let metric = localStorage.getItem('nfo26_metric') || 'mean';
-const pr = p => metric==='median' ? p.median : metric==='p90' ? p.p90 : p.price;
+const modelBase = p => metric==='median' ? p.median : metric==='p90' ? p.p90 : p.price;
+const BYKEY = {};
+// live inflation per position: (actual $ paid) / (model $) over everything sold so far,
+// with the first sale at each position discounted by its known opener premium.
+function inflFactor(pos){
+  if(!anchorOn) return 1;
+  let a=0, m=0, seenFirst=false;
+  for(const k of soldSeq){
+    const p=BYKEY[k]; if(!p || p.pos!==pos || sold[k]===undefined) continue;
+    let act=sold[k];
+    if(!seenFirst){ act=Math.max(1, act-(OPENER[pos]||0)); seenFirst=true; }
+    a+=act; m+=p.price;
+  }
+  return m>0 ? a/m : 1;
+}
+const adj = (p,v) => Math.max(1, Math.round(v*inflFactor(p.pos)));
+const pr     = p => sold[keyOf(p)]!==undefined ? sold[keyOf(p)] : adj(p, modelBase(p));
+const prBuy  = p => adj(p, p.buy);
+const prWalk = p => adj(p, p.p90);
 const METRIC_NOTE = {
   mean:   'Mean — the average price this slot has gone for. The default planning number.',
   median: 'Median — the typical price (ignores a few runaway bidding wars). Often the more honest "expected" cost.',
@@ -276,6 +307,8 @@ function save(){
   localStorage.setItem('nfo26_roster', JSON.stringify([...picked]));
   localStorage.setItem('nfo26_gone', JSON.stringify([...gone]));
   localStorage.setItem('nfo26_watch', JSON.stringify([...watch]));
+  localStorage.setItem('nfo26_sold', JSON.stringify(sold));
+  localStorage.setItem('nfo26_soldseq', JSON.stringify(soldSeq));
 }
 
 function filtered(){
@@ -315,8 +348,8 @@ function renderTable(){
       <td class="td-pos"><span class="pos ${p.pos}">${p.pos}</span></td>
       <td class="td-rd">${p.round}</td>
       <td class="price td-price">$${pr(p)}</td>
-      <td class="buy td-buy">$${p.buy}</td>
-      <td class="walk td-walk">$${p.p90}</td>
+      <td class="buy td-buy">$${prBuy(p)}</td>
+      <td class="walk td-walk">$${prWalk(p)}</td>
       <td class="td-acts"><span class="acts">
         <button class="act star ${isW?'on':''}" data-a="w" title="Watch (highlight target)">${isW?'★':'☆'}</button>
         <button class="act draft ${isP?'on':''}" data-a="d" title="Draft to my team">${isP?'✓':'+'}</button>
@@ -330,10 +363,18 @@ function renderTable(){
   rows.appendChild(frag);
 }
 
+function recordSale(k){
+  const p=BYKEY[k]; if(!p) return;
+  const v=prompt('What did '+p.name+' actually sell for?  (Enter = use $'+pr(p)+')', String(pr(p)));
+  if(v===null) return;                       // cancelled -> no price recorded
+  const n=parseInt(v,10);
+  if(!isNaN(n) && n>=1){ sold[k]=n; if(!soldSeq.includes(k)) soldSeq.push(k); }
+}
+function clearSale(k){ delete sold[k]; const i=soldSeq.indexOf(k); if(i>=0) soldSeq.splice(i,1); }
 function act(k,a){
   if(a==='w'){ watch.has(k)?watch.delete(k):watch.add(k); }
-  else if(a==='d'){ if(picked.has(k)){picked.delete(k);} else {picked.add(k); gone.delete(k);} }
-  else if(a==='g'){ if(gone.has(k)){gone.delete(k);} else {gone.add(k); picked.delete(k);} }
+  else if(a==='d'){ if(picked.has(k)){picked.delete(k); clearSale(k);} else {picked.add(k); gone.delete(k); recordSale(k);} }
+  else if(a==='g'){ if(gone.has(k)){gone.delete(k); clearSale(k);} else {gone.add(k); picked.delete(k); recordSale(k);} }
   save(); renderTable(); renderRoster();
 }
 
@@ -393,6 +434,21 @@ function renderRoster(){
     w.className='warn show info'; w.textContent='Still need for a legal lineup: '+(need.join(', ')||('+'+(8-n)+' starters'));
   } else { w.className='warn'; w.textContent=''; }
 
+  // live market anchor bar
+  const ib=document.getElementById('inflBar');
+  if(!anchorOn){ ib.innerHTML='<span class="none">⚓ Anchoring off — showing raw model prices.</span>'; }
+  else {
+    const parts=[];
+    for(const pos of ['RB','WR','QB','TE']){
+      const n=soldSeq.filter(k=>BYKEY[k]&&BYKEY[k].pos===pos&&sold[k]!==undefined).length;
+      if(!n){ parts.push('<span class="none">'+pos+' —</span>'); continue; }
+      const f=inflFactor(pos), cls=f>1.02?'up':(f<0.98?'dn':'');
+      parts.push('<span class="'+cls+'">'+pos+' ×'+f.toFixed(2)+'</span> <span class="none">('+n+')</span>');
+    }
+    ib.innerHTML='⚓ <b>Live market:</b> '+parts.join(' · ')+
+      ' <span class="none">— prices below are adjusted to what the room is actually paying.</span>';
+  }
+
   // watchlist (watched, not yet drafted by anyone)
   const wl=DATA.filter(p=>watch.has(keyOf(p))&&!picked.has(keyOf(p))&&!gone.has(keyOf(p)));
   setTxt('wCount',wl.length);
@@ -418,6 +474,17 @@ function wireToggle(id,key){
   el.addEventListener('click',()=>{cb.checked=!cb.checked;filt[key]=cb.checked;el.classList.toggle('on',cb.checked);renderTable();});
 }
 wireToggle('tHideGone','hideGone'); wireToggle('tWatchOnly','watchOnly');
+
+// ⚓ price anchoring on/off
+(function(){
+  const el=document.getElementById('tAnchor'), cb=el.querySelector('input');
+  cb.checked=anchorOn; el.classList.toggle('on',anchorOn);
+  el.addEventListener('click',()=>{
+    anchorOn=!anchorOn; cb.checked=anchorOn; el.classList.toggle('on',anchorOn);
+    localStorage.setItem('nfo26_anchor', anchorOn?'1':'0');
+    renderTable(); renderRoster();
+  });
+})();
 
 // price metric: Mean / Median / 90th  (drives the table AND all budget math)
 function applyMetric(){
