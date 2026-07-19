@@ -131,6 +131,16 @@
   .clear{width:100%;margin-top:12px;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--ink-2);cursor:pointer;font:inherit}
   .clear:hover{color:var(--crit);border-color:var(--crit)}
   .watch-empty{color:var(--muted);font-size:.82rem}
+  .tier-row{display:flex;align-items:center;gap:6px;padding:3px 0;font-size:.78rem;flex-wrap:wrap}
+  .tier-row .pos{min-width:26px;text-align:center}
+  .tier-b{background:var(--surface-2);border:1px solid var(--border);border-radius:6px;
+    padding:1px 6px;font-variant-numeric:tabular-nums;font-size:.72rem}
+  .tier-b.warn{background:color-mix(in srgb,var(--warn) 22%,transparent);border-color:var(--warn);font-weight:700}
+  .tier-b.crit{background:color-mix(in srgb,var(--crit) 20%,transparent);border-color:var(--crit);
+    color:var(--crit);font-weight:700}
+  .cliff{font-size:.72rem;margin-left:auto;white-space:nowrap}
+  .cliff.soon{color:var(--warn);font-weight:700}
+  .cliff.now{color:var(--crit);font-weight:700}
   .foot{max-width:1240px;margin:8px auto 40px;padding:0 16px;color:var(--muted);font-size:.75rem}
   .foot b{color:var(--ink-2)}
 
@@ -245,6 +255,11 @@
   </div>
 
   <aside class="side">
+    <div class="card">
+      <h2>⛰ Tier watch</h2>
+      <div id="tierBody"></div>
+      <p class="maxbid" id="tierNote"></p>
+    </div>
     <div class="card">
       <h2>My Roster <span class="sub" id="rCount">0 / 14</span></h2>
       <div class="meter" id="meter"><i style="width:0%"></i></div>
@@ -394,11 +409,45 @@ function act(k,a){
   if(a==='w'){ watch.has(k)?watch.delete(k):watch.add(k); }
   else if(a==='d'){ if(picked.has(k)){picked.delete(k);} else {picked.add(k); gone.delete(k);} }
   else if(a==='g'){ if(gone.has(k)){gone.delete(k);} else {gone.add(k); picked.delete(k);} }
-  save(); renderTable(); renderRoster();
+  save(); renderTable(); renderRoster(); renderTiers();
 }
 
 const setTxt=(id,v)=>{const e=document.getElementById(id);const t=e.querySelector('.v');(t||e).textContent=v;};
 
+// Historical supply cliffs (2021-25): once this many at a position are gone,
+// realised prices step down hard. Bands = how many are LEFT above each price.
+const CLIFF = { RB:{n:14, drop:11, to:29}, WR:{n:12, drop:11, to:21} };
+const BANDS = { RB:[40,25,15], WR:[30,20,12], QB:[10,5], TE:[8,4] };
+function renderTiers(){
+  const body=document.getElementById('tierBody'); body.innerHTML='';
+  let note='';
+  ['RB','WR','QB','TE'].forEach(pos=>{
+    const all=DATA.filter(p=>p.pos===pos);
+    const taken=all.filter(p=>gone.has(keyOf(p))||picked.has(keyOf(p))).length;
+    const left=all.filter(p=>!gone.has(keyOf(p))&&!picked.has(keyOf(p)));
+    const row=document.createElement('div'); row.className='tier-row';
+    let html='<span class="pos '+pos+'">'+pos+'</span>';
+    BANDS[pos].forEach(t=>{
+      const c=left.filter(p=>pr(p)>=t).length;
+      const cls = c===0?'crit' : (c<=2?'warn':'');
+      html+='<span class="tier-b '+cls+'">'+c+' left ≥$'+t+'</span>';
+    });
+    const cl=CLIFF[pos];
+    if(cl){
+      const to=cl.n-taken;
+      const cls = to<=0?'now' : (to<=3?'soon':'');
+      html+='<span class="cliff '+cls+'">'+
+        (to>0 ? to+' to cliff' : 'CLIFF PASSED')+'</span>';
+      if(to>0&&to<=3) note='⚠ <b>'+pos+' cliff in '+to+'</b> — after ~'+cl.n+' '+pos+
+        's are gone, prices step down about $'+cl.drop+' (to ~$'+cl.to+'). Buy before it, not after.';
+      else if(to<=0&&!note) note='The '+pos+' cliff has passed — the next tier is roughly $'+cl.to+
+        '. Patience is cheap here now.';
+    }
+    row.innerHTML=html; body.appendChild(row);
+  });
+  document.getElementById('tierNote').innerHTML = note ||
+    'Counts update as players come off the board. Watch a band hit 1–2 — that tier is about to empty.';
+}
 function renderRoster(){
   const list=DATA.filter(p=>picked.has(keyOf(p)));
   const spent=list.reduce((s,p)=>s+pr(p),0), left=BUDGET-spent, n=list.length;
@@ -545,6 +594,7 @@ document.getElementById('clear').addEventListener('click',()=>{
 
 applyWalk();
 applyMetric();   // sets the metric UI then renders table + roster
+renderTiers();
 </script>
 </body>
 </html>
