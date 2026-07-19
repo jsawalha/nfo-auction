@@ -292,6 +292,58 @@
   <strong>Honest caveat:</strong> a crowded, grinding war may mean the room <em>correctly re-rated</em> a player after ADP was set (a camp riser, a role change) — info the model can't see. So use the paddle-count as a live signal to <em>reassess</em>, not blind gospel: if five sharp GMs are all-in on a guy your sheet has cheap, your number might be stale. If it's a random pile-on, hold your max and walk.
 </div>
 
+<h2>Nomination timing — when to put your targets up</h2>
+<p class="lede">Does nominating a cheap player <em>early</em> get him cheaper, or more expensive? We measured every auctioned player's <strong>residual</strong> (actual price − model price) against when he was nominated. The answer is decisive — and it's the opposite of what most managers do.</p>
+
+<div class="tiles">
+  <div class="tile"><div class="v">+$1.3</div><div class="k">what a <strong>cheap player</strong> costs when nominated <strong>early</strong></div></div>
+  <div class="tile"><div class="v">−$0.2</div><div class="k">the same tier of player nominated <strong>late</strong></div></div>
+  <div class="tile"><div class="v">~20%</div><div class="k">overpay for putting a $7 target up early</div></div>
+  <div class="tile"><div class="v">~$9</div><div class="k">saved across 5–6 darts by simply <strong>waiting</strong></div></div>
+</div>
+
+<h3>1. Cheap players cost MORE when nominated early</h3>
+<p class="lede">Players with ADP &gt; 60 (n = 382), by the third of the draft they were nominated in:</p>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Nominated in</th><th>n</th><th>Avg model $</th><th>Avg actual $</th><th>Residual</th></tr></thead>
+  <tbody>
+    <tr><td>Early third</td><td>24</td><td>$7.3</td><td>$8.6</td><td class="hi-bad">+$1.3</td></tr>
+    <tr><td>Middle third</td><td>144</td><td>$6.1</td><td>$7.1</td><td class="hi-bad">+$1.0</td></tr>
+    <tr><td><strong>Late third</strong></td><td>214</td><td>$2.8</td><td>$2.6</td><td class="hi-good">−$0.2</td></tr>
+  </tbody>
+</table></div>
+<p class="hint">A <strong>~$1.50 swing</strong> — on a $7 player that's a <strong>~20% overpay</strong> for nominating him early. The trend is clean and monotonic, and the mid/late buckets are well sampled.</p>
+
+<h3>2. The driver is budget state, not ADP position</h3>
+<p class="lede">Sorting instead by how far <em>ahead of his own ADP</em> a player was nominated:</p>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Nominated…</th><th>n</th><th>Residual</th></tr></thead>
+  <tbody>
+    <tr><td>40+ slots early</td><td>83</td><td>+$0.7</td></tr>
+    <tr><td>15–39 slots early</td><td>109</td><td>+$0.6</td></tr>
+    <tr><td>Within ±14 of ADP (baseline)</td><td>362</td><td>+$0.8</td></tr>
+    <tr><td><strong>15+ slots late</strong></td><td>125</td><td class="hi-good">−$1.2</td></tr>
+  </tbody>
+</table></div>
+<div class="callout">
+  <strong>Being early relative to ADP adds nothing</strong> (+0.6–0.7 vs a +0.8 baseline). The discount comes <em>purely</em> from waiting until the room is out of money. It isn't "he went before his ADP so he's overpriced" — it's simply <strong>whether cash was still in the room.</strong> Same mechanism as the draft-clock finding: 57% of the money is gone in the first hour.
+</div>
+
+<h3>3. What to nominate, and when</h3>
+<ul>
+  <li><strong>Early → nominate expensive players you do NOT want.</strong> Double win: you drain rivals' budgets <em>and</em> they eat the full-wallet premium. (Exactly what San Di Lello and Down by the Rivers do.) The only thing to <em>buy</em> early is an anchor — you'll pay ~+$1.0, the unavoidable price of certainty, since <strong>96% of $30+ studs sell in the first third</strong>.</li>
+  <li><strong>Middle → still a premium (+$1.0).</strong> Don't spend here on fungible players. This is the dead zone that sinks the bottom teams.</li>
+  <li><strong>Late → this is where your darts live.</strong> The residual finally flips negative (−$0.2 to −$1.2). Nominate and buy your cheap targets here.</li>
+  <li><strong>Never nominate a cheap player you actually want, early.</strong> It's the worst option available: you pay the full-wallet premium <em>and</em> tip your hand on someone nobody was thinking about yet.</li>
+</ul>
+
+<div class="callout good">
+  <strong>The rule that ties it together: wait on fungible players, never on scarce ones.</strong><br>
+  <strong>Fungible</strong> (dollar darts, deep WRs) — dozens of substitutes, and darts hit only ~15% anyway, so losing any <em>specific</em> one costs nothing. <strong>Wait.</strong> Across 5–6 darts that's ~<strong>$9 saved</strong> — a free WR upgrade.<br>
+  <strong>Scarce</strong> (RB anchors, the last player above a tier cliff) — no substitute exists (RB waiver hit rate is just 22%). <strong>Pay the early premium and take him.</strong>
+</div>
+<p class="hint">⚠ Only 24 cheap players were nominated early across 5 drafts, so that +$1.3 specifically is directional. The <em>direction</em> is solid — confirmed by the well-sampled middle (+$1.0, n=144) and late (−$0.2, n=214) buckets.</p>
+
 <h2>GM scouting reports</h2>
 <div id="gmCards"></div>
 
@@ -304,6 +356,7 @@
   <li><strong>Two valid QB paths:</strong> buy a cheap one at auction, or punt and stream. <strong>Paying up does not work.</strong></li>
   <li><strong>Inflation is localized, and the squeeze is a myth.</strong> Never open a position (the first WR pays +$6.5); be the <em>last</em> buyer in a tier (~$3–5 cheaper), but don't fall off the cliff below it.</li>
   <li><strong>Count the paddles.</strong> ≤4 bidders = par or bargain; the 5th paddle means ~$3 over value. Sparse-and-quick wars are your window; crowded, grinding wars are overpays to fade.</li>
+  <li><strong>Wait on fungible players, never on scarce ones.</strong> Cheap targets cost ~$1.50 more early than late — nominate expensive guys you don't want early, and buy your darts once the room is broke.</li>
 </ol>
 
 <footer>
