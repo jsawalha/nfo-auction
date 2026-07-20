@@ -99,6 +99,12 @@
   .gm-body strong{color:var(--ink)}
   .tag{display:inline-block; font-size:.7rem; padding:2px 8px; border-radius:99px; border:1px solid var(--border); color:var(--ink-2); margin-right:6px}
 
+  .tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:18px 0 24px}
+  .tools a{display:block;padding:12px 14px;border:1px solid var(--border);border-radius:10px;
+    background:var(--surface);text-decoration:none;color:var(--ink);transition:border-color .15s}
+  .tools a:hover{border-color:var(--accent)}
+  .tools b{display:block;font-size:.95rem;margin-bottom:2px}
+  .tools span{display:block;font-size:.75rem;color:var(--muted);line-height:1.35}
   .callout{border-left:3px solid var(--crit); background:color-mix(in srgb, var(--crit) 5%, transparent); padding:12px 16px; border-radius:0 8px 8px 0; margin:16px 0; font-size:.92rem}
   .callout.good{border-left-color:var(--good); background:color-mix(in srgb, var(--good) 6%, transparent)}
   .callout strong{color:var(--ink)}
@@ -115,6 +121,12 @@
   <p class="sub">How all 10 general managers spend their money, and when.</p>
   <p class="meta">3-year averages (2023–2025) · 10 GMs · $200 budget · 14-man roster · Draft-clock section uses the full 6-year sample (2020–2025)</p>
 </header>
+
+<nav class="tools">
+  <a href="nfo_2026_draft_board.html"><b>Draft Board</b><span>Prices, tiers, buy &amp; walk-away, live tier watch</span></a>
+  <a href="nfo_2026_par_sheet.html"><b>Par Sheet</b><span>Budget every slot on your 14-man roster</span></a>
+  <a href="nfo_mock_draft.html"><b>Mock Draft &#9654;</b><span>Play a live auction against the 9 real GMs</span></a>
+</nav>
 
 <h2>The headline</h2>
 <p class="lede">The GMs who win are <strong>not</strong> the ones who spend most on any position. They're the ones with the best points-per-dollar and hit rate. Allocation is noise; <strong>selection and market discipline</strong> are signal.</p>
