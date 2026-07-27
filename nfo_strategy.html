@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NFO — 2026 Auction Strategy</title>
+<style>
+  :root{
+    --page:#f9f9f7; --surface:#fcfcfb;
+    --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10);
+    --s1:#2a78d6; --s2:#1baf7a; --s6:#e34948;
+    --crit:#d03b3b; --good:#0ca30c; --warn:#c98500;
+    --shadow:0 1px 2px rgba(11,11,11,.04),0 4px 16px rgba(11,11,11,.04);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --page:#0d0d0d; --surface:#1a1a19;
+      --ink:#fff; --ink-2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10);
+      --s1:#3987e5; --s2:#199e70; --s6:#e66767;
+      --crit:#e66767; --good:#0ca30c; --warn:#eda100;
+      --shadow:none;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0; background:var(--page); color:var(--ink);
+    font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; -webkit-text-size-adjust:100%}
+  .wrap{max-width:1120px; margin:0 auto; padding:32px 20px 80px}
+  header.top{padding:8px 0 28px; border-bottom:1px solid var(--border); margin-bottom:8px}
+  h1{font-size:clamp(1.6rem,4vw,2.3rem); line-height:1.2; margin:0 0 8px; letter-spacing:-.02em}
+  .sub{color:var(--ink-2); margin:0; font-size:.95rem}
+  .meta{color:var(--muted); font-size:.82rem; margin-top:10px}
+  h2{font-size:1.3rem; margin:48px 0 6px; letter-spacing:-.01em; scroll-margin-top:16px}
+  h3{font-size:1.02rem; margin:26px 0 8px}
+  .lede{color:var(--ink-2); margin:0 0 20px; max-width:72ch}
+  .part{margin:40px 0 0; padding:10px 0 4px; border-top:2px solid var(--axis)}
+  .part .k{font-size:.72rem; text-transform:uppercase; letter-spacing:.08em; color:var(--s1); font-weight:700}
+  .part h2{margin-top:6px}
+  .tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin:20px 0 8px}
+  .tile{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px; box-shadow:var(--shadow)}
+  .tile .v{font-size:1.7rem; font-weight:650; letter-spacing:-.02em; line-height:1.1}
+  .tile .k{color:var(--ink-2); font-size:.78rem; margin-top:6px; line-height:1.35}
+  .tile.bad .v{color:var(--crit)} .tile.good .v{color:var(--good)}
+  .tbl-wrap{overflow-x:auto; -webkit-overflow-scrolling:touch; border:1px solid var(--border); border-radius:12px; background:var(--surface); box-shadow:var(--shadow); margin:14px 0}
+  table{border-collapse:collapse; width:100%; font-size:.86rem; min-width:560px}
+  th,td{padding:9px 12px; text-align:right; white-space:nowrap; border-bottom:1px solid var(--grid)}
+  th:first-child,td:first-child{text-align:left; white-space:normal; min-width:140px}
+  thead th{position:sticky; top:0; background:var(--surface); color:var(--ink-2);
+    font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; font-weight:600; border-bottom:1px solid var(--axis)}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:color-mix(in srgb, var(--s1) 6%, transparent)}
+  td{font-variant-numeric:tabular-nums}
+  .hi-good{color:var(--good); font-weight:600}
+  .hi-bad{color:var(--crit); font-weight:600}
+  .hint{color:var(--muted); font-size:.78rem; margin:8px 0 0}
+  .callout{border-left:3px solid var(--crit); background:color-mix(in srgb, var(--crit) 5%, transparent);
+    padding:12px 16px; border-radius:0 8px 8px 0; margin:16px 0; font-size:.92rem}
+  .callout.good{border-left-color:var(--good); background:color-mix(in srgb, var(--good) 6%, transparent)}
+  .callout.warn{border-left-color:var(--warn); background:color-mix(in srgb, var(--warn) 7%, transparent)}
+  .callout strong{color:var(--ink)}
+  ol,ul{padding-left:20px; color:var(--ink-2)} li{margin-bottom:8px} li strong{color:var(--ink)}
+  .toc{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:6px 18px; margin:18px 0 8px;
+    background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:16px 20px; box-shadow:var(--shadow)}
+  .toc a{color:var(--ink-2); text-decoration:none; font-size:.85rem; padding:2px 0; display:block}
+  .toc a:hover{color:var(--s1)}
+  .toc .h{font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700; margin:4px 0 2px}
+  .tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:18px 0 8px}
+  .tools a{display:block;padding:12px 14px;border:1px solid var(--border);border-radius:10px;
+    background:var(--surface);text-decoration:none;color:var(--ink);transition:border-color .15s}
+  .tools a:hover{border-color:var(--s1)}
+  .tools b{display:block;font-size:.95rem;margin-bottom:2px}
+  .tools span{display:block;font-size:.75rem;color:var(--muted);line-height:1.35}
+  .pill{display:inline-block;font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:99px;color:#fff;margin-right:5px;vertical-align:middle}
+  .pill.RB{background:#2a78d6}.pill.WR{background:#1baf7a}.pill.QB{background:#eb6834}.pill.TE{background:#7a5cff}
+  footer{margin-top:56px; padding-top:20px; border-top:1px solid var(--border); color:var(--muted); font-size:.8rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <h1>NFO — 2026 Auction Strategy</h1>
+  <p class="sub">New Football Order · 10 teams · $200 auction · 14-man roster · 6 seasons of data (2020–2025)</p>
+  <p class="meta">The playbook, plus the deeper findings that came out of the 2026 prep work. Analysis basis: every auction bid, every weekly score, 60 franchise-seasons.</p>
+</header>
+
+<nav class="tools">
+  <a href="index.html"><b>Auction Analysis</b><span>GM bid curves, the draft clock, scouting reports</span></a>
+  <a href="nfo_2026_draft_board.html"><b>Draft Board ▸</b><span>Prices, tiers, buy &amp; walk-away, live tier watch</span></a>
+  <a href="nfo_2026_par_sheet.html"><b>Par Sheet</b><span>Budget every slot on your 14-man roster</span></a>
+  <a href="nfo_mock_draft.html"><b>Mock Draft ▸</b><span>Play a live auction against the 9 real GMs</span></a>
+</nav>
+
+<div class="toc">
+  <div>
+    <div class="h">The playbook</div>
+    <a href="#rules">The rules that drive everything</a>
+    <a href="#core">The core finding</a>
+    <a href="#allocation">Winning allocation</a>
+    <a href="#hitrate">Hit rate — the key table</a>
+    <a href="#timing">When to buy</a>
+    <a href="#qb">QB — the biggest edge</a>
+    <a href="#plan">The 2026 draft plan</a>
+  </div>
+  <div>
+    <div class="h">2026 update — new findings</div>
+    <a href="#cliffs">Tier cliffs</a>
+    <a href="#rbmarket">The RB market &amp; the $30–44 desert</a>
+    <a href="#pounce">Nomination-order value pockets</a>
+    <a href="#bigplay">The 50+ TD big-play edge</a>
+    <a href="#sticky">Sticky stats &amp; TD regression</a>
+    <a href="#discipline">Spending discipline</a>
+    <a href="#psychology">Market psychology — value leaks</a>
+    <a href="#bench">Handcuffs &amp; the bench</a>
+    <a href="#waivers">The waiver reality</a>
+    <a href="#live">Live draft-day tactics</a>
+    <a href="#scouting">Opponent scouting</a>
+  </div>
+</div>
+
+<div class="part"><span class="k">Part 1</span><h2 style="margin-top:6px">The playbook</h2></div>
+
+<h2 id="rules">The rules that drive everything</h2>
+<ul>
+  <li><strong>Starters: 8</strong> — QB×1, RB 2–4, WR 2–4, TE 1–3 (deep flex). <strong>Roster: 14.</strong></li>
+  <li><strong>Budget $200</strong> · waiver FAAB ~$100 · low-scoring format (avg starter ~9 ppg; a 15+ week is a real spike).</li>
+</ul>
+<h3>Scoring quirk: 50+ yard TDs score DOUBLE</h3>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>TD type</th><th>0–49 yds</th><th>50+ yds</th></tr></thead>
+  <tbody>
+    <tr><td>Passing TD</td><td>5</td><td class="hi-good">10</td></tr>
+    <tr><td>Rushing TD</td><td>6</td><td class="hi-good">12</td></tr>
+    <tr><td>Receiving TD</td><td>6</td><td class="hi-good">12</td></tr>
+  </tbody>
+</table></div>
+<p class="lede">This is the league's most exploitable rule and nobody else prices it. A single long score is a 12-point swing — explosive, big-play players are worth more to you than the market charges. (Who, specifically: see <a href="#bigplay">the 50+ TD edge</a>.)</p>
+
+<h2 id="core">The core finding</h2>
+<p class="lede"><strong>Auction <em>shape</em> barely differs between winners and losers. Player <em>selection</em> is everything.</strong></p>
+<div class="tbl-wrap"><table>
+  <thead><tr><th></th><th>Top 3</th><th>Bottom 3</th></tr></thead>
+  <tbody>
+    <tr><td>Total spent</td><td>$199</td><td>$198</td></tr>
+    <tr><td>Spent on RB</td><td>$101</td><td>$99</td></tr>
+    <tr><td># studs ($40+)</td><td>1.8</td><td>1.8</td></tr>
+    <tr><td><strong>Points For</strong></td><td class="hi-good">1071</td><td class="hi-bad">842</td></tr>
+  </tbody>
+</table></div>
+<p class="lede">Everyone converges on the same template. Winners score <strong>~27% more points from a nearly identical spend</strong>. The edge is <strong>points-per-dollar</strong>, not positional allocation. (Total WR spend vs wins correlates <strong>−0.07</strong> — i.e., zero. How much you spend doesn't matter; how you distribute it does.)</p>
+
+<h2 id="allocation">The winning allocation</h2>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Pos</th><th>Target $</th><th>%</th><th>Note</th></tr></thead>
+  <tbody>
+    <tr><td><span class="pill RB">RB</span></td><td>~$100</td><td>50%</td><td>1–2 anchors, cap it here</td></tr>
+    <tr><td><span class="pill WR">WR</span></td><td>~$80</td><td>40%</td><td>one $35–45 alpha + value tier</td></tr>
+    <tr><td><span class="pill QB">QB</span></td><td>~$8–12</td><td>5%</td><td>cheap &amp; most efficient</td></tr>
+    <tr><td><span class="pill TE">TE</span></td><td>~$8</td><td>4%</td><td>stream / punt</td></tr>
+  </tbody>
+</table></div>
+<p class="hint">Efficiency (pts per $): <b>QB 24.6</b> ≫ TE 5.1 > WR 3.7 > <b>RB 3.1</b>. RB is the <em>least</em> efficient position — yet it's where the whole league overspends.</p>
+
+<h2 id="hitrate">Hit rate by price — the most important table</h2>
+<p class="lede">HIT = the player returned genuinely startable production.</p>
+<div class="tbl-wrap"><table>
+  <thead><tr><th></th><th>$1–5</th><th>$6–9</th><th>$10–15</th><th>$16–25</th><th>$26–40</th><th>$41+</th></tr></thead>
+  <tbody>
+    <tr><td><span class="pill QB">QB</span></td><td>33%</td><td>66%</td><td>60%</td><td>66%</td><td>—</td><td>—</td></tr>
+    <tr><td><span class="pill RB">RB</span></td><td>15%</td><td>50%</td><td class="hi-bad">47%</td><td class="hi-bad">46%</td><td class="hi-good">90%</td><td class="hi-good">95%</td></tr>
+    <tr><td><span class="pill WR">WR</span></td><td>25%</td><td>40%</td><td class="hi-good">66%</td><td class="hi-good">63%</td><td>89%</td><td>86%</td></tr>
+    <tr><td><span class="pill TE">TE</span></td><td>39%</td><td>53%</td><td>85%</td><td>80%</td><td>100%</td><td>—</td></tr>
+  </tbody>
+</table></div>
+<div class="callout"><strong>RB and WR are opposites.</strong> RB is a <strong>barbell</strong> — a $20 RB gives you the same ~5.0 ppg as a $6 RB, then it rockets to <strong>90–95% at $26+</strong>. So buy a $26+ RB anchor or a $1–5 dart and <strong>never the $10–25 RB</strong>. WR is <strong>smooth</strong> — the $10–15 tier is a genuine value pocket (66% hit); that's where your WR2/WR3 come from.</div>
+
+<h2 id="timing">When to buy</h2>
+<div class="tiles">
+  <div class="tile"><div class="v">96%</div><div class="k">of $30+ studs sell in the <b>first third</b> — you cannot slow-play your way to a star</div></div>
+  <div class="tile"><div class="v">~90%</div><div class="k">of every hindsight-optimal roster's money was spent <b>early</b></div></div>
+  <div class="tile bad"><div class="v">1</div><div class="k">total late-phase hit across 4 years (Kyren $1, '23)</div></div>
+</div>
+<p class="lede"><strong>Nomination tactic:</strong> throw out expensive players you <em>don't</em> want early to drain rivals' cash, then strike on your targets. The bottom teams over-spend in the <em>middle</em> — buying mid-tier instead of anchors, so their whole roster is coin flips with no floor. <b>Don't hoard.</b> If it's an hour in and you're still holding most of your budget, you are not being disciplined — you are losing.</p>
+
+<h2 id="qb">QB — the single biggest edge in the league</h2>
+<p class="lede"><strong>The 20 biggest FAAB league-winners in league history are ALL quarterbacks.</strong> QBs are cheap at auction <em>and</em> the wire hands out a top-5 QB for $0–8 every single year (Rodgers $8→317, Maye $8→232, Mayfield $3→224, Cousins $1→189, Purdy $0→140).</p>
+<div class="callout good"><strong>Punt QB to ~$5–12 at the auction, then stream/claim off waivers.</strong> Basaraville Xtreme has quietly mastered this and won 2025. It is free points every year.</div>
+
+<h2 id="plan">The 2026 draft plan</h2>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Slot</th><th>Tier</th><th>Target $</th><th>Hit%</th></tr></thead>
+  <tbody>
+    <tr><td><span class="pill RB">RB1</span></td><td>$50+ anchor</td><td>$52</td><td class="hi-good">95%</td></tr>
+    <tr><td><span class="pill RB">RB2</span></td><td>$40+ anchor</td><td>$42</td><td class="hi-good">~93%</td></tr>
+    <tr><td><span class="pill RB">RB3–6</span></td><td>$1–5 / handcuff darts</td><td>$3/$2/$1/$1</td><td>15%</td></tr>
+    <tr><td><span class="pill WR">WR1</span></td><td>alpha</td><td>$34–45</td><td class="hi-good">87%</td></tr>
+    <tr><td><span class="pill WR">WR2–4</span></td><td>$10–15 value</td><td>$13/$11/$10</td><td class="hi-good">66%</td></tr>
+    <tr><td><span class="pill TE">TE1</span></td><td>elite or punt (see cliffs)</td><td>$7–16</td><td>85%</td></tr>
+    <tr><td><span class="pill QB">QB1</span></td><td>value, then stream</td><td>$10</td><td>66%</td></tr>
+  </tbody>
+</table></div>
+<p class="lede"><b>Rules of engagement:</b> get anchors early · skip the $10–25 RB entirely · load the $10–15 WR tier · punt QB · don't hoard · if you miss an anchor, pull money from a <em>dart</em>, never settle into a mid-tier RB.</p>
+
+<div class="part"><span class="k">Part 2 · added from the 2026 prep work</span><h2 style="margin-top:6px">New findings</h2>
+<p class="lede">Everything below came out of the deeper dig for 2026 — supply curves, tier cliffs, big-play scoring, red-zone regression, spending discipline, and how the two best GMs actually operate.</p></div>
+
+<h2 id="cliffs">Tier cliffs — buy before them, not after</h2>
+<p class="lede">Built from your hand tiers. Once a position's cliff clears, realised prices step down hard — the live counter for these is on the <a href="nfo_2026_draft_board.html">draft board's Tier Watch</a>.</p>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Cliff fires when…</th><th>Price goes</th><th>Drop</th></tr></thead>
+  <tbody>
+    <tr><td><span class="pill TE">TE</span> 4 gone (end of the elite 4)</td><td>$16 → $4</td><td class="hi-bad">−$12</td></tr>
+    <tr><td><span class="pill WR">WR</span> 6 gone (end of Tier 1)</td><td>$44 → $28</td><td class="hi-bad">−$16</td></tr>
+    <tr><td><span class="pill WR">WR</span> 13 gone (end of Tier 2)</td><td>$28 → $15</td><td class="hi-bad">−$13</td></tr>
+    <tr><td><span class="pill RB">RB</span> 12 gone (end of Tier 2)</td><td>$46 → $30</td><td class="hi-bad">−$16</td></tr>
+    <tr><td><span class="pill RB">RB</span> 18 gone (end of Tier 3)</td><td>$30 → $16</td><td class="hi-bad">−$14</td></tr>
+  </tbody>
+</table></div>
+<div class="callout"><strong>TE is the sharpest wall in the whole draft</strong> — only 4 elite tight ends (Bowers/McBride/Loveland/Warren ~$16), then a drop to $4. There is no soft landing: get one of the four, or punt to a $2 streamer. Don't get caught paying $9 for the 5th-best TE. QB has <em>no</em> cliff — it slides $9→$4→$2, so just wait.</div>
+<p class="hint">The four numbers to hold in your head: <b>RB 12 and 18. WR 6 and 13. TE 4.</b></p>
+
+<h2 id="rbmarket">The RB market &amp; the $30–44 desert</h2>
+<p class="lede">RB supply, per draft, averaged over 5 years — this is why the barbell exists.</p>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Price band</th><th>RBs / yr</th><th>Cumulative</th></tr></thead>
+  <tbody>
+    <tr><td>$50+</td><td>6.6</td><td>6.6</td></tr>
+    <tr><td>$45–49</td><td>3.6</td><td>10.2 at $45+</td></tr>
+    <tr><td class="hi-bad">$40–44</td><td class="hi-bad">1.8</td><td>12.0 at $40+</td></tr>
+    <tr><td class="hi-bad">$30–39</td><td class="hi-bad">2.0</td><td>14.0 at $30+</td></tr>
+    <tr><td>$20–29</td><td>5.2</td><td>19.2 at $20+</td></tr>
+  </tbody>
+</table></div>
+<div class="callout warn"><strong>$30–44 is a desert — ~3.8 backs a year, and some years zero.</strong> (2023 had <em>no</em> RB at $40–44; 2022 had none at $30–39.) The market is barbell-shaped: ~10 anchors at $45+, a hole, then value at ≤$29. <strong>"I'll grab a solid RB2 for ~$35" is a plan that frequently has no inventory.</strong></div>
+<p class="lede"><strong>The tier to actively skip: $12–22 (RB14–30), median $18.</strong> That's a replaceable committee back at a price where the room overpays for name recognition. Commit to one side of the barbell — anchors at $45+ <em>or</em> sub-$10 targeted darts — and never budget for the middle. Note the cumulative <b>12 RBs at $40+</b> is exactly where the RB cliff sits.</p>
+
+<h2 id="pounce">Nomination-order value pockets</h2>
+<p class="lede">Does a player go cheaper depending on <em>when</em> in the run he's nominated? After controlling for talent (price minus what that ADP rank normally costs), almost everything is noise — with two real soft spots.</p>
+<div class="tiles">
+  <div class="tile good"><div class="v">−$8</div><div class="k">the <b>~10th RB</b> off the board — the mid-run lull after the elite rush drains the aggressive wallets</div></div>
+  <div class="tile good"><div class="v">−$6</div><div class="k">the <b>~6th WR</b> off the board — the pause before the WR-hoarders re-engage</div></div>
+  <div class="tile"><div class="v">−$0</div><div class="k">effect of a positional <b>run</b> (RB1–3 back-to-back) on the next back — none</div></div>
+</div>
+<div class="callout"><strong>A run predicts nothing; remaining supply predicts everything.</strong> "RB1–3 just went, pounce on RB11" is a myth — he sells for exactly his model price. The real edge is the <em>lull</em>: a legit starter nominated <em>after</em> the opening stud rush but <em>before</em> the position's hoarders wake back up. Watch for an RB1–9-caliber back thrown out around the 5th–10th off the board.</div>
+
+<h2 id="bigplay">The 50+ TD big-play edge — who to target</h2>
+<p class="lede">Your league doubles 50+ yard TDs, but the TDs themselves are noise year to year. The edge is repeatable big-play <em>ability</em> — players who post 50+ TDs <em>every</em> year (certified from nflverse play-by-play, 2023–25).</p>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Profile</th><th>Players</th></tr></thead>
+  <tbody>
+    <tr><td><b>WR — repeatable, every year</b></td><td>Ja'Marr Chase, Nico Collins, Zay Flowers, DK Metcalf, CeeDee Lamb</td></tr>
+    <tr><td class="hi-good"><b>WR — cheap &amp; certified ⭐</b></td><td>Alec Pierce, Rashid Shaheed (1–2 long TDs every year, go near-minimum)</td></tr>
+    <tr><td><b>RB — repeatable</b></td><td>Saquon Barkley, then the workhorses (J. Taylor, Achane)</td></tr>
+    <tr><td><b>2025-heavy, weigh but don't trust yet</b></td><td>TreVeyon Henderson (4 as a rookie!), Ashton Jeanty, Bijan, JSN, Gibbs</td></tr>
+  </tbody>
+</table></div>
+<div class="callout good"><strong>Your cheapest real edge: Alec Pierce &amp; Rashid Shaheed.</strong> They hit 50+ TDs every year, go for near-minimum, and your scoring pays them <em>double</em>. The market prices them as dart-throws; your rules make them repeatable point spikes.</div>
+<p class="hint">⚠ Trust consistency, not spikes — most players with a big 50+ TD total did it in one season and won't repeat. Weigh only the multi-year names. QBs benefit most on paper (Stroud, Allen) but QB is a $9 punt tier, so it's a tiebreaker there, not a reason to spend up.</p>
+
+<h2 id="sticky">Sticky stats &amp; TD regression</h2>
+<p class="lede">Which stats actually predict <em>next-year</em> production — and which are variance you shouldn't pay for.</p>
+<h3>What predicts, what doesn't</h3>
+<ul>
+  <li><strong>WR: buy YAC + target share.</strong> Yards-after-catch is both sticky and forecasts next-year points better than the TDs themselves. Fade the low-catch-rate deep threat.</li>
+  <li><strong>RB: buy volume &amp; red-zone opportunity.</strong> Carries and RZ touches are equally predictive of next-year TDs <em>and</em> far more stable than the TDs. Project the workload, not the highlight reel.</li>
+  <li><strong>Fade efficiency spikes and last year's TDs.</strong> RB yards-per-carry is ~zero-sticky; TDs regress hard (WR TD → next-year signal is <em>negative</em>). Don't overpay a back off a shiny YPC year or a receiver off a lucky TD count.</li>
+</ul>
+<h3>2026 TD-regression board (from 2025 red-zone workload)</h3>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>Player</th><th>2025 TDs</th><th>RZ-expected</th><th>Signal</th></tr></thead>
+  <tbody>
+    <tr><td><span class="pill WR">WR</span> Justin Jefferson</td><td>2</td><td>6.8</td><td class="hi-good">BUY — TD bounce-back</td></tr>
+    <tr><td><span class="pill WR">WR</span> CeeDee Lamb</td><td>3</td><td>6.1</td><td class="hi-good">BUY</td></tr>
+    <tr><td><span class="pill TE">TE</span> Tyler Warren</td><td>5</td><td>9.7</td><td class="hi-good">BUY (cheap TE)</td></tr>
+    <tr><td><span class="pill WR">WR</span> Puka Nacua</td><td>14</td><td>9.0</td><td class="hi-bad">FADE — regression</td></tr>
+    <tr><td><span class="pill WR">WR</span> Jaxon Smith-Njigba</td><td>12</td><td>8.3</td><td class="hi-bad">FADE</td></tr>
+    <tr><td><span class="pill WR">WR</span> Tee Higgins</td><td>11</td><td>5.8</td><td class="hi-bad">FADE (sharpest at a mid price)</td></tr>
+  </tbody>
+</table></div>
+<p class="hint">Buy the bounce-backs whose price bakes in a down TD year; don't pay <em>up</em> past tier for a TD spike that won't repeat. RB fades (J. Taylor, Gibbs over-scored) are volume monsters — don't avoid them, just don't overpay for the spike.</p>
+
+<h2 id="discipline">Spending discipline — the real gap</h2>
+<p class="lede">Overpay = price paid minus what that ADP rank normally costs. Every dollar overpaid is a dollar the disciplined teams turn into value — the pot is fixed.</p>
+<div class="tbl-wrap"><table>
+  <thead><tr><th>GM</th><th>Avg overpay</th><th>On $15+ studs</th></tr></thead>
+  <tbody>
+    <tr><td>ReD PantY NiTe (you)</td><td class="hi-bad">+$1.2</td><td class="hi-bad">+$2.8</td></tr>
+    <tr><td>The Flying Kossaks</td><td>+$0.8</td><td>+$2.1</td></tr>
+    <tr><td>San Di Lello (champ)</td><td>−$0.3</td><td>−$0.4</td></tr>
+    <tr><td>Down by the Rivers</td><td class="hi-good">−$0.7</td><td class="hi-good">−$2.0</td></tr>
+    <tr><td>Wilfork On First Date</td><td class="hi-good">−$1.0</td><td>−$1.0</td></tr>
+  </tbody>
+</table></div>
+<div class="callout"><strong>You overpay most in the league — and worst on the expensive studs (+$2.8).</strong> The two biggest overpayers are two of the weakest teams. Getting from +$1.2 to San Di Lello's −$0.3 is a ~$20 swing — a full mid-tier player, recovered.</div>
+<p class="lede"><strong>The champions overpay too — but in a targeted way, funded by discipline.</strong> San Di Lello pays a tier premium on <em>RB anchors</em> (Fournette +$16, Taylor +$8); the Cats pay up for <em>ascending mid-tier WRs</em> (Diggs +$10, Olave +$11, Nico +$9). Both net to neutral because they claw it back with values and darts everywhere else. Copy the <em>structure</em>: 1–2 conviction tier-premiums, then ruthless discipline. Diffuse overpaying across the whole roster is what finishes last.</p>
+
+<h2 id="psychology">Market psychology — where the value leaks are</h2>
+<p class="lede">The biggest bargains aren't structural (timing/position runs are ~zero). They're psychological — the auction <strong>overpays for ceiling and fades uncertainty</strong>.</p>
+<ul>
+  <li><strong>Buy the boring-floor workhorse the room fears.</strong> The biggest value leaks are RBs with a "cloud" — committee / age / contract narratives (Najee Harris RB9 ADP → $22, Mixon → −$16, Rhamondre → −$14). The market fears the committee; the volume-secure back keeps the workload anyway. Elite TEs leak <em>every</em> year (nobody wants to pay TE).</li>
+  <li><strong>Don't buy the dead-cat name.</strong> Davante Adams for $6 wasn't a steal — his ADP had already collapsed to WR40 and the price just matched it. Before you pounce on a cheap star, check his ADP; if it already fell, the discount is <em>earned</em>, not a leak.</li>
+</ul>
+<div class="callout good"><strong>The rule:</strong> target the player with a scary <em>narrative</em> but a stable <em>role</em> (workhorse RBs tagged "committee," elite TEs nobody bids up). Fade the famous name whose ranking already dropped.</div>
+
+<h2 id="bench">Handcuffs &amp; the bench — the San Di Lello method</h2>
+<p class="lede">The champion runs a 7-RB build and fills the back half with a specific kind of cheap back.</p>
+<ul>
+  <li><strong>Buy $2–10 targeted handcuffs, not $1 fliers.</strong> His cheap RBs cluster at $4–8 — the clear backup / ascending committee guy (Judkins, Warren, Charbonnet), not pure lottery tickets. Over 5 years he bought exactly one $1 RB (Bucky Irving — and it hit).</li>
+  <li><strong>Self-handcuff your most fragile stud.</strong> CMC + Elijah Mitchell ($2), James Cook + Ray Davis ($3) — buy the direct backup so an injury to your anchor doesn't sink your season.</li>
+  <li><strong>Don't marry the insurance.</strong> He drops the pure-depth handcuff around week 5–11 once the starter proves healthy, freeing the spot for a streamer. Handcuffs are insurance with a rent cost — cancel it when the risk clears.</li>
+</ul>
+<p class="hint">Even the champion can't pick which $1 dart will hit — he drafted <em>and dropped</em> Shaheed, McConkey, and Adonai Mitchell in 2024. Darts are unknowable: buy several, keep the one that hits, cut the rest fast.</p>
+
+<h2 id="waivers">The waiver reality — churn ≠ success</h2>
+<p class="lede">In this league, waiver production and winning correlate at ~zero (slightly negative). Heavy churn is a symptom of a weak roster, not a cause of winning — San Di Lello ranks near <em>last</em> in waiver points and wins because his draft is strong.</p>
+<div class="callout good"><strong>What the successful waiver seasons actually do:</strong> stream QB &amp; TE off the wire (you draft only 1 of each), and snipe the RB who just inherited a backfield (Rico Dowdle, Kimani Vidal, Jamaal Williams). Act on <strong>Wednesday</strong> (waiver processing) with <strong>Friday</strong> free-agent tweaks, and bid real FAAB ($7–45) on a genuine difference-maker — not $0 fliers. It's a scalpel for winners, not a crutch.</div>
+<p class="hint">You currently have the <em>most</em> waiver volume in the league and finish 8th — you're churning to patch the draft. Fix the draft first; then use the wire surgically like the Kossaks (14.5 pts/pickup, top-3 finishes).</p>
+
+<h2 id="live">Live draft-day tactics</h2>
+<ul>
+  <li><strong>Count the paddles — bidder count is the strongest live signal (+0.41).</strong> 5+ bidders means ~$3 over model regardless of scarcity. Position runs (~0) and nomination timing tell you far less than how many hands are up.</li>
+  <li><strong>Don't nominate QB or TE early expecting a discount — there isn't one.</strong> Early QB is flat-priced; early <em>elite</em> TE actually goes at a premium (+$8). The discount comes from <em>waiting</em> until wallets empty. Let a rival nominate the elite TE past the 20-minute mark, then pounce.</li>
+  <li><strong>Read the depth tiers by age.</strong> At RB22-ish depth, the room pays up for young upside ($16–23) and fades aging vets ($8–10). TreVeyon at ~$17 is correctly priced as an upside dart, not a decline vet — fine at/below that, a reach toward $23.</li>
+  <li><strong>Watch the Tier Watch bands.</strong> Amber (≤2 left) = act, red = move on. Buying above a cliff at model price beats buying below it at a discount — the cheaper player is materially worse.</li>
+</ul>
+
+<h2 id="scouting">Opponent scouting</h2>
+<h3>San Di Lello — the dynasty (avg finish 2.6)</h3>
+<p class="lede">7-RB build (6.6 RB / 5.2 WR / 1 QB / 1 TE), stars-and-scrubs, streams QB/TE. Anchors on RB, pays a <em>targeted</em> tier premium on the back he wants, then recovers with discipline. <strong>Against him: don't get into an RB war on a mid-tier back he's locked onto.</strong> Note the natural experiment — 2024 WR-heavy → #1; 2025 RB-heavy with no WR alpha + a $22 mid-tier RB → collapsed to #6. Best single validation of this whole doc.</p>
+<h3>The Cats — the balanced counter (2× #2)</h3>
+<p class="lede">WR-leaning and flexible (5.4 RB / 6.4 WR), will pivot hard (3 RB / 9 WR in 2024). Their <em>mid-tier WRs</em> carry it (Pickens $20→106, Higgins $21→76) — consistent with the data: mid-tier WR good, mid-tier RB bad. <strong>Against them: expect them to bid up ascending mid-tier WRs.</strong></p>
+<h3>Down by the Rivers — the sniper</h3>
+<p class="lede">Dual-RB anchor every year, the league's earliest buyer (Ekeler at minute 0/9/10 three straight years). Won't fight you for a <em>second</em> back, but will take a premium RB off the board before you've settled in.</p>
+<h3>ReD PantY NiTe — the fix (that's you)</h3>
+<p class="lede">Pours ~70% into RB (least-efficient position), starves WR, overpays most in the league (+$2.8 on studs), and churns the wire hardest — and finishes 8th–10th. <strong>The fix is one move repeated:</strong> cut ~$40 off RB → buy a real $35–45 WR alpha; hold your walk-away prices on studs; copy San Di Lello's structure (2–3 anchors, $2–10 targeted handcuffs, nothing in the middle). You're already good at cheap-QB streaming — lean into it.</p>
+
+<footer>
+  Built from 6 seasons of NFO auction, transaction, and weekly-scoring data + nflverse play-by-play (2023–25).
+  Success = regular-season record + points-for (playoff bracket was never scraped). Single-player numbers are directional;
+  the repeating structure is the takeaway. Companion tools: <a href="index.html">Auction Analysis</a> ·
+  <a href="nfo_2026_draft_board.html">Draft Board</a> · <a href="nfo_2026_par_sheet.html">Par Sheet</a> ·
+  <a href="nfo_mock_draft.html">Mock Draft</a>.
+</footer>
+
+</div>
+</body>
+</html>
