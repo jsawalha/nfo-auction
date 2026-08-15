@@ -116,7 +116,9 @@
     <div class="card">
       <h2>Auction Messages
         <button id="copybtn" onclick="copyFeed()" style="float:right;font-size:.7rem;padding:3px 8px;
-          border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;">&#128203; copy feed</button></h2>
+          border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;">&#128203; copy feed</button>
+        <button id="linkbtn" onclick="connectFile()" style="float:right;margin-right:6px;font-size:.7rem;padding:3px 8px;
+          border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;">&#128279; live-link</button></h2>
       <div id="feed" style="max-height:200px;overflow-y:auto;font-family:ui-monospace,Menlo,Consolas,monospace;
         font-size:.68rem;line-height:1.45;color:var(--ink-2);white-space:pre-wrap;word-break:break-word;
         background:var(--surface-2);border-radius:8px;padding:8px;"></div>
@@ -306,6 +308,7 @@ function logPick(gm,player,price){
   AUCTION_LOG.push(player.name+' '+(player.team||'FA')+' '+player.pos+' won by '+gm.name+
                    ' for $'+price+'.00 ['+mflTime()+']');
   const f=$('feed'); if(f){ f.textContent=AUCTION_LOG.join(' '); f.scrollTop=f.scrollHeight; }
+  writeFeed();          // if live-linked, push the updated feed to the shared file
 }
 function copyFeed(){
   const txt=AUCTION_LOG.join(' ');
@@ -314,6 +317,25 @@ function copyFeed(){
   if(navigator.clipboard){navigator.clipboard.writeText(txt).then(done,done);}
   else{const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);
     t.select();document.execCommand('copy');t.remove();done();}
+}
+// One-time "live-link": pick a file once, then every pick is written to it automatically,
+// so the Streamlit app (Mock draft feed source) reads it live — no copy/paste.
+let FEED_HANDLE=null;
+async function connectFile(){
+  if(!window.showSaveFilePicker){
+    alert('Live-link needs Chrome/Edge over https or localhost. Use "copy feed" instead, '
+          +'or open the hosted https version of this page.'); return; }
+  try{
+    FEED_HANDLE=await window.showSaveFilePicker({suggestedName:'nfo_feed.txt',
+      types:[{description:'Text',accept:{'text/plain':['.txt']}}]});
+    const b=$('linkbtn'); if(b){b.innerHTML='&#9679; live-linked';b.style.color='var(--green)';}
+    writeFeed();
+  }catch(e){}
+}
+async function writeFeed(){
+  if(!FEED_HANDLE)return;
+  try{const w=await FEED_HANDLE.createWritable();await w.write(AUCTION_LOG.join(' '));await w.close();}
+  catch(e){}
 }
 function userCap(){
   return Math.min(eng.user.maxBid(), S.player?posCap(S.player.pos):1e9);
