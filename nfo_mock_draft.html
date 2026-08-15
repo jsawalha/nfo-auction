@@ -113,6 +113,16 @@
       <h2>Draft picks</h2>
       <div class="log" id="picks"></div>
     </div>
+    <div class="card">
+      <h2>Auction Messages
+        <button id="copybtn" onclick="copyFeed()" style="float:right;font-size:.7rem;padding:3px 8px;
+          border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;">&#128203; copy feed</button></h2>
+      <div id="feed" style="max-height:200px;overflow-y:auto;font-family:ui-monospace,Menlo,Consolas,monospace;
+        font-size:.68rem;line-height:1.45;color:var(--ink-2);white-space:pre-wrap;word-break:break-word;
+        background:var(--surface-2);border-radius:8px;padding:8px;"></div>
+      <div style="font-size:.64rem;color:var(--muted);margin-top:4px;">
+        Exact MFL room format &mdash; copy this into the Streamlit app&rsquo;s Demo mode to drive the live board.</div>
+    </div>
   </div>
 
   <div>
@@ -280,12 +290,30 @@ function renderGMs(){
     '<span class="pos '+p.pos+'">'+p.pos+'</span> '+esc(p.name)+'</span><b>$'+p.paid+'</b></div>').join('')
     || '<div style="color:var(--muted)">nothing yet</div>';
 }
+const AUCTION_LOG=[];
+function mflTime(){
+  const d=new Date(); let h=d.getHours(); const ap=h>=12?'p.m.':'a.m.'; h=h%12||12;
+  const p=n=>String(n).padStart(2,'0');
+  return h+':'+p(d.getMinutes())+':'+p(d.getSeconds())+' '+ap;
+}
 function logPick(gm,player,price){
   const d=document.createElement('div');
   d.innerHTML='<span>'+esc(gm.name)+' &mdash; '+esc(player.name)+
     ' <span class="pos '+player.pos+'">'+player.pos+'</span></span><span class="amt">$'+price+'</span>';
   if(gm.isUser)d.style.background='color-mix(in srgb,var(--green) 14%,transparent)';
   $('picks').insertBefore(d,$('picks').firstChild);
+  // exact MFL "Auction Messages" line, so the Streamlit app's demo mode can parse it
+  AUCTION_LOG.push(player.name+' '+(player.team||'FA')+' '+player.pos+' won by '+gm.name+
+                   ' for $'+price+'.00 ['+mflTime()+']');
+  const f=$('feed'); if(f){ f.textContent=AUCTION_LOG.join(' '); f.scrollTop=f.scrollHeight; }
+}
+function copyFeed(){
+  const txt=AUCTION_LOG.join(' ');
+  const done=()=>{const b=$('copybtn'); if(b){b.textContent='copied ✓';
+    setTimeout(()=>{b.innerHTML='\u{1F4CB} copy feed';},1200);}};
+  if(navigator.clipboard){navigator.clipboard.writeText(txt).then(done,done);}
+  else{const t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);
+    t.select();document.execCommand('copy');t.remove();done();}
 }
 function userCap(){
   return Math.min(eng.user.maxBid(), S.player?posCap(S.player.pos):1e9);
