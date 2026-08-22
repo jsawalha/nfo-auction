@@ -175,7 +175,7 @@ class GM{
   unmetRequired(){const o={};for(const k in CFG.REQ)o[k]=Math.max(0,CFG.REQ[k]-this.count(k));return o;}
   full(){return this.roster.length>=CFG.ROSTER_MAX;}
   need(pos){const c=this.count(pos);
-    if(c>=CFG.SOFT_CAP[pos])return 0.20;
+    if(c>=CFG.SOFT_CAP[pos])return 0.25;
     if(c<CFG.REQ[pos])return 1.08;
     return 0.95;}
   wtp(player){
